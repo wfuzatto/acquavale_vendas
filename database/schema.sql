@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS products (
+CREATE TABLE IF NOT EXISTS acquavale_vendas_products (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  sku VARCHAR(40) NOT NULL UNIQUE,
  name VARCHAR(150) NOT NULL,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS products (
  INDEX idx_products_active_sort (active,sort_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS orders (
+CREATE TABLE IF NOT EXISTS acquavale_vendas_orders (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  order_code VARCHAR(32) NOT NULL UNIQUE,
  buyer_email VARCHAR(190) NOT NULL,
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS orders (
  INDEX idx_orders_expresso_reservation(expresso_reservation_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS order_items (
+CREATE TABLE IF NOT EXISTS acquavale_vendas_order_items (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  order_id BIGINT UNSIGNED NOT NULL,
  product_id BIGINT UNSIGNED NOT NULL,
@@ -60,11 +60,11 @@ CREATE TABLE IF NOT EXISTS order_items (
  ncm VARCHAR(10) NULL,
  cest VARCHAR(10) NULL,
  created_at DATETIME NOT NULL,
- CONSTRAINT fk_order_items_order FOREIGN KEY(order_id) REFERENCES orders(id),
- CONSTRAINT fk_order_items_product FOREIGN KEY(product_id) REFERENCES products(id)
+ CONSTRAINT fk_order_items_order FOREIGN KEY(order_id) REFERENCES acquavale_vendas_orders(id),
+ CONSTRAINT fk_order_items_product FOREIGN KEY(product_id) REFERENCES acquavale_vendas_products(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS visitors (
+CREATE TABLE IF NOT EXISTS acquavale_vendas_visitors (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  order_id BIGINT UNSIGNED NOT NULL,
  first_name VARCHAR(100) NOT NULL,
@@ -77,11 +77,11 @@ CREATE TABLE IF NOT EXISTS visitors (
  photo_path VARCHAR(255) NOT NULL,
  biometric_consent_at DATETIME NOT NULL,
  created_at DATETIME NOT NULL,
- CONSTRAINT fk_visitors_order FOREIGN KEY(order_id) REFERENCES orders(id),
+ CONSTRAINT fk_visitors_order FOREIGN KEY(order_id) REFERENCES acquavale_vendas_orders(id),
  INDEX idx_visitors_document(document_type,document_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS tickets (
+CREATE TABLE IF NOT EXISTS acquavale_vendas_tickets (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  order_id BIGINT UNSIGNED NOT NULL,
  product_id BIGINT UNSIGNED NOT NULL,
@@ -92,13 +92,13 @@ CREATE TABLE IF NOT EXISTS tickets (
  validation_mode ENUM('once_total','once_per_day','unlimited_validity') NOT NULL,
  status ENUM('pending','active','blocked','cancelled','used') NOT NULL DEFAULT 'pending',
  created_at DATETIME NOT NULL,
- CONSTRAINT fk_tickets_order FOREIGN KEY(order_id) REFERENCES orders(id),
- CONSTRAINT fk_tickets_product FOREIGN KEY(product_id) REFERENCES products(id),
- CONSTRAINT fk_tickets_visitor FOREIGN KEY(visitor_id) REFERENCES visitors(id),
+ CONSTRAINT fk_tickets_order FOREIGN KEY(order_id) REFERENCES acquavale_vendas_orders(id),
+ CONSTRAINT fk_tickets_product FOREIGN KEY(product_id) REFERENCES acquavale_vendas_products(id),
+ CONSTRAINT fk_tickets_visitor FOREIGN KEY(visitor_id) REFERENCES acquavale_vendas_visitors(id),
  INDEX idx_tickets_validity(status,valid_from,valid_to)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS ticket_redemptions (
+CREATE TABLE IF NOT EXISTS acquavale_vendas_ticket_redemptions (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  ticket_id BIGINT UNSIGNED NOT NULL,
  visit_date DATE NOT NULL,
@@ -106,22 +106,22 @@ CREATE TABLE IF NOT EXISTS ticket_redemptions (
  idempotency_key VARCHAR(100) NULL,
  validated_at DATETIME NOT NULL,
  source_ip VARCHAR(64) NULL,
- CONSTRAINT fk_redemptions_ticket FOREIGN KEY(ticket_id) REFERENCES tickets(id),
+ CONSTRAINT fk_redemptions_ticket FOREIGN KEY(ticket_id) REFERENCES acquavale_vendas_tickets(id),
  UNIQUE KEY uq_ticket_day(ticket_id,visit_date),
  UNIQUE KEY uq_redemption_idempotency(idempotency_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS integration_receipts (
+CREATE TABLE IF NOT EXISTS acquavale_vendas_integration_receipts (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  order_id BIGINT UNSIGNED NOT NULL,
  consumer VARCHAR(100) NOT NULL,
  external_reference VARCHAR(190) NULL,
  processed_at DATETIME NOT NULL,
- CONSTRAINT fk_integration_receipts_order FOREIGN KEY(order_id) REFERENCES orders(id),
+ CONSTRAINT fk_integration_receipts_order FOREIGN KEY(order_id) REFERENCES acquavale_vendas_orders(id),
  UNIQUE KEY uq_order_consumer(order_id,consumer)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE IF NOT EXISTS audit_log (
+CREATE TABLE IF NOT EXISTS acquavale_vendas_audit_log (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  actor VARCHAR(120) NOT NULL,
  action VARCHAR(120) NOT NULL,
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 
-CREATE TABLE IF NOT EXISTS ticket_integrations (
+CREATE TABLE IF NOT EXISTS acquavale_vendas_ticket_integrations (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  ticket_id BIGINT UNSIGNED NOT NULL,
  consumer VARCHAR(100) NOT NULL,
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS ticket_integrations (
  confirmed_at DATETIME NULL,
  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
- CONSTRAINT fk_ticket_integrations_ticket FOREIGN KEY(ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+ CONSTRAINT fk_ticket_integrations_ticket FOREIGN KEY(ticket_id) REFERENCES acquavale_vendas_tickets(id) ON DELETE CASCADE,
  UNIQUE KEY uq_ticket_consumer(ticket_id,consumer),
  INDEX idx_ticket_integrations_state(state,updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
