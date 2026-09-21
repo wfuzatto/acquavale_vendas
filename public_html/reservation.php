@@ -32,7 +32,7 @@ if ($code==='') {
 }
 
 try {
-    $service=new ExpressoReservationService();
+    $service=new IPlateReservationService();
     $reservation=$service->lookup($code);
 
     $_SESSION['validated_reservation']=$reservation;
@@ -43,7 +43,7 @@ try {
     ]);
 } catch (Throwable $e) {
     unset($_SESSION['validated_reservation']);
-    error_log('Expresso reservation lookup: '.$e->getMessage());
+    error_log('iPlate reservation lookup: '.$e->getMessage());
 
     json_response([
         'ok'=>false,
