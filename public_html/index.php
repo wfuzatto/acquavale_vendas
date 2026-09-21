@@ -289,7 +289,7 @@ function renderSteps(int $current, bool $interactive = false): void
                 <div class="stage-heading">
                     <span class="stage-kicker">Passo 0</span>
                     <h2>Procure sua reserva</h2>
-                    <p>Informe o número da reserva do hotel. A consulta é feita diretamente na API Expresso, usando a mesma integração já utilizada pelo iPlate.</p>
+                    <p>Informe o número da reserva do hotel. A consulta usa o mesmo backend online do iPlate: o servidor autentica, recebe o api_token e valida a reserva antes de liberar a compra.</p>
                 </div>
 
                 <div class="reservation-gate card panel">
