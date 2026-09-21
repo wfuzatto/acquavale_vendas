@@ -1,7 +1,0 @@
-{
-  "name": "wfuzatto/acquavale-vendas",
-  "description": "Venda e validacao de ingressos do AcquaVale Park",
-  "type": "project",
-  "require": {"php": "^8.2"},
-  "autoload": {"psr-4": {"AcquaVale\\": "app/"}}
-}

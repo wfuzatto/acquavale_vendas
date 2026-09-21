@@ -3,46 +3,58 @@ declare(strict_types=1);
 
 define('APP_ROOT', dirname(__DIR__));
 define('STORAGE_ROOT', APP_ROOT . '/storage');
+define('LOCAL_CONFIG_FILE', APP_ROOT . '/config/config.local.php');
+define('INSTALL_LOCK_FILE', STORAGE_ROOT . '/install.lock');
 
-function loadEnv(string $file): void {
-    if (!is_file($file)) return;
-    foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
-        $line = trim($line);
-        if ($line === '' || str_starts_with($line, '#') || !str_contains($line, '=')) continue;
-        [$key, $value] = array_map('trim', explode('=', $line, 2));
-        $value = trim($value, "\"'");
-        if (getenv($key) === false) {
-            putenv("$key=$value");
-            $_ENV[$key] = $value;
-        }
+$GLOBALS['aqv_config'] = [];
+if (is_file(LOCAL_CONFIG_FILE)) {
+    $loaded = require LOCAL_CONFIG_FILE;
+    if (!is_array($loaded)) {
+        throw new RuntimeException('config/config.local.php deve retornar um array.');
+    }
+    $GLOBALS['aqv_config'] = $loaded;
+}
+
+function cfg(string $path, mixed $default = null): mixed {
+    $value = $GLOBALS['aqv_config'] ?? [];
+    foreach (explode('.', $path) as $part) {
+        if (!is_array($value) || !array_key_exists($part, $value)) return $default;
+        $value = $value[$part];
+    }
+    return $value;
+}
+
+function installed(): bool {
+    return is_file(LOCAL_CONFIG_FILE) && is_file(INSTALL_LOCK_FILE);
+}
+
+if (PHP_SAPI !== 'cli' && !installed()) {
+    $script = basename((string)($_SERVER['SCRIPT_NAME'] ?? ''));
+    if ($script !== 'install.php') {
+        header('Location: install.php');
+        exit;
     }
 }
-loadEnv(APP_ROOT . '/.env');
 
-function env(string $key, ?string $default = null): ?string {
-    $value = getenv($key);
-    return $value === false ? $default : $value;
-}
-
-date_default_timezone_set(env('APP_TIMEZONE', 'America/Sao_Paulo') ?: 'America/Sao_Paulo');
+date_default_timezone_set((string)cfg('app.timezone', 'America/Sao_Paulo'));
 
 foreach ([STORAGE_ROOT.'/logs', STORAGE_ROOT.'/private/visitors', STORAGE_ROOT.'/cache'] as $dir) {
-    if (!is_dir($dir)) @mkdir($dir, 0775, true);
+    if (!is_dir($dir)) @mkdir($dir, 0750, true);
 }
 
-ini_set('log_errors','1');
-ini_set('error_log',STORAGE_ROOT.'/logs/app.log');
-if (env('APP_DEBUG','false') === 'true') {
-    ini_set('display_errors','1');
+ini_set('log_errors', '1');
+ini_set('error_log', STORAGE_ROOT.'/logs/app.log');
+if ((bool)cfg('app.debug', false)) {
+    ini_set('display_errors', '1');
     error_reporting(E_ALL);
 } else {
-    ini_set('display_errors','0');
+    ini_set('display_errors', '0');
 }
 
 spl_autoload_register(function(string $class): void {
     $prefix='AcquaVale\\';
-    if (!str_starts_with($class,$prefix)) return;
-    $relative=substr($class,strlen($prefix));
+    if (!str_starts_with($class, $prefix)) return;
+    $relative=substr($class, strlen($prefix));
     $file=APP_ROOT.'/app/'.str_replace('\\','/',$relative).'.php';
     if (is_file($file)) require $file;
 });
@@ -53,9 +65,9 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_name('acquavale_session');
     session_set_cookie_params([
         'httponly'=>true,
-        'secure'=>env('SESSION_SECURE','false') === 'true',
+        'secure'=>(bool)cfg('app.session_secure', true),
         'samesite'=>'Lax',
-        'path'=>'/'
+        'path'=>base_path() ?: '/',
     ]);
     session_start();
 }

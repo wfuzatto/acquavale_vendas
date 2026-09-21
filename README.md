@@ -1,46 +1,53 @@
 # AcquaVale Vendas
 
-Sistema de **venda, gestão e validação de ingressos do AcquaVale Park**, com identidade visual baseada no site oficial: azul profundo, azul água, verde-limão, formas arredondadas e linguagem visual aquática.
+Sistema web de venda, gestão e validação de ingressos do AcquaVale Park.
 
-## Implementado
-- Loja responsiva de ingressos e adicionais.
-- Cadastro de produtos com nome, SKU, preço, NCM, CEST, tipo, duração, regra de validação e status.
-- Produtos iniciais: ingresso 1 dia, ingresso 2 dias e locker.
-- Carrinho e resumo antes do pagamento.
-- Cadastro individual por ingresso: nome, sobrenome, foto, e-mail, telefone, data de entrada, CPF/RG/CNH e sexo.
-- Foto pela câmera ou galeria, armazenada fora da pasta pública.
-- Consentimento explícito para uso da foto no controle de acesso.
-- Simulação de pagamento aprovado.
-- MySQL para pedidos, itens, visitantes, ingressos e validações.
-- Painel administrativo.
-- API autenticada para catracas/face scanner.
-- Validador auxiliar de teste.
-- Fila de integração com claim + ack + idempotência.
-- Docker Compose com PHP 8.3/Apache + MySQL 8.4.
+A implantação principal foi preparada para **cPanel / HostGator compartilhada**, usando somente **PHP 8.2+ e MySQL**, sem Docker e sem dependência obrigatória de Composer.
 
-## Executar
-```bash
-cp .env.example .env
-docker compose up -d --build
+## Estrutura
+
+```
+acquavale_vendas/
+├── app/                 código PHP privado
+├── config/              configuração privada
+├── database/            schema e dados iniciais
+├── storage/             logs e fotos privadas
+├── cpanel/              instruções de deploy
+└── public_html/         único diretório público
 ```
 
-Acessos:
-- Loja: http://localhost:8088/
-- Admin: http://localhost:8088/admin.php
-- Validador: http://localhost:8088/validator.php
+O DocumentRoot do domínio/subdomínio deve apontar para `public_html/`.
 
-Desenvolvimento: `admin@acquavale.local` / `change-me-now`.
-Troque senha, API key e senhas do banco antes de produção.
+## Recursos implementados
 
-## Validação
-- `once_total`: uma validação em toda a validade.
-- `once_per_day`: uma validação por dia; adequado a ingresso de 2+ dias.
-- `unlimited_validity`: não consome enquanto estiver válido.
+- loja responsiva no visual AcquaVale;
+- produtos com nome, SKU, preço, NCM, CEST, tipo, duração e regra de validação;
+- ingresso de 1 dia, 2 dias e locker como exemplos iniciais;
+- carrinho e resumo antes do pagamento;
+- nome, sobrenome, e-mail, telefone, data de entrada, CPF/RG/CNH, sexo e foto por visitante;
+- foto pela câmera ou galeria;
+- armazenamento da foto fora do DocumentRoot;
+- consentimento para uso da foto no controle de acesso;
+- pedido, itens, visitantes e ingressos persistidos em MySQL;
+- pagamento simulado;
+- painel administrativo;
+- API autenticada para catracas/face scanner;
+- validação transacional e idempotente;
+- fila de integração de vendas com claim + ACK, evitando duplicidade de efeito;
+- instalador web para cPanel.
 
-## Não duplicar vendas no sistema auxiliar
-O transporte distribuído não garante magicamente "exactly once". O projeto implementa efeito idempotente: `sale-next` faz claim transacional, o consumidor usa `order_code` como chave idempotente e confirma com `sale-ack`. Se cair antes do ACK, o claim expira e a mesma venda pode ser reenviada sem duplicar o efeito.
+## Instalação rápida
 
-## LGPD/biometria
-Foto usada para reconhecimento facial é dado biométrico sensível. O projeto já guarda a imagem fora do webroot, exige consentimento e restringe sua entrega à API/admin. Antes da produção ainda devem ser formalizados retenção, base legal/termo, perfis de acesso, criptografia/backup, auditoria e exclusão.
+1. Crie banco e usuário MySQL no cPanel.
+2. Aponte o domínio/subdomínio para `acquavale_vendas/public_html`.
+3. Selecione PHP 8.2 ou superior.
+4. Abra `/install.php`.
+5. Informe os dados do banco e crie a conta administrativa.
 
-Veja `docs/API.md` e `docs/ARCHITECTURE.md`.
+Veja [cpanel/DEPLOY.md](cpanel/DEPLOY.md).
+
+## Segurança
+
+`config/config.local.php` não é versionado. Fotos ficam em `storage/private/visitors/`, fora do diretório público. O instalador cria `storage/install.lock` ao finalizar.
+
+Antes de produção, o ambiente deve usar HTTPS. Por envolver foto destinada a identificação facial, também deve existir política de retenção, exclusão, acesso e auditoria compatível com a operação do parque.

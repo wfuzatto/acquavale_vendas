@@ -1,10 +1,10 @@
-.env
-/vendor/
+/config/config.local.php
+/storage/install.lock
 /storage/logs/*.log
 /storage/private/visitors/*
 !/storage/private/visitors/.gitkeep
 /storage/cache/*
-!.gitkeep
+!/storage/cache/.gitkeep
 .DS_Store
 Thumbs.db
 .idea/

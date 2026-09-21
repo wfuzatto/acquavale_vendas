@@ -7,17 +7,17 @@ use AcquaVale\Auth;
 $action=$_GET['action']??'dashboard';
 $error=null;
 
-if($action==='logout'){Auth::logout();redirect('/admin.php?action=login');}
+if($action==='logout'){Auth::logout();redirect(url('admin.php?action=login'));}
 
 if($action==='login'){
-    if(Auth::check())redirect('/admin.php');
+    if(Auth::check())redirect(url('admin.php'));
     if($_SERVER['REQUEST_METHOD']==='POST'){
         csrf_validate();
-        if(Auth::login((string)($_POST['email']??''),(string)($_POST['password']??'')))redirect('/admin.php');
+        if(Auth::login((string)($_POST['email']??''),(string)($_POST['password']??'')))redirect(url('admin.php'));
         $error='Credenciais inválidas.';
     }
     ?>
-    <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin | AcquaVale</title><link rel="stylesheet" href="/assets/css/app.css"></head>
+    <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Admin | AcquaVale</title><link rel="stylesheet" href="assets/css/app.css"></head>
     <body><div class="login-wrap"><form class="card login-card" method="post"><img src="https://www.acquavale.com.br/acquavale-logo.png" alt="AcquaVale"><h1 style="text-align:center;color:var(--navy)">Gestão de vendas</h1>
     <?php if($error): ?><div class="notice error"><?=e($error)?></div><?php endif; ?>
     <input type="hidden" name="_csrf" value="<?=e(csrf_token())?>">
@@ -58,7 +58,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
             }
             db()->prepare("INSERT INTO audit_log(actor,action,entity_type,entity_id,metadata,ip) VALUES(?,?,?,?,?,?)")
                 ->execute([$_SESSION['admin']['email'],'product.save','product',(string)$id,json_encode(['sku'=>$data[0]]),client_ip()]);
-            redirect('/admin.php?action=products');
+            redirect(url('admin.php?action=products'));
         }
     }catch(Throwable $e){$error=$e->getMessage();}
 }
@@ -82,9 +82,9 @@ $metrics=[
 ];
 
 function adminHead(string $title):void{ ?>
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($title)?> | AcquaVale</title><link rel="stylesheet" href="/assets/css/app.css"></head>
-<body class="admin-body"><div class="admin-top"><div class="container"><strong>AcquaVale · Gestão de vendas</strong><a class="btn btn-outline" href="/admin.php?action=logout">Sair</a></div></div>
-<div class="container admin-grid"><aside class="card sidebar"><a href="/admin.php">Dashboard</a><a href="/admin.php?action=products">Produtos</a><a href="/admin.php?action=orders">Pedidos</a><a href="/validator.php" target="_blank">Validador</a><a href="/">Loja</a></aside><main>
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?=e($title)?> | AcquaVale</title><link rel="stylesheet" href="assets/css/app.css"></head>
+<body class="admin-body"><div class="admin-top"><div class="container"><strong>AcquaVale · Gestão de vendas</strong><a class="btn btn-outline" href="admin.php?action=logout">Sair</a></div></div>
+<div class="container admin-grid"><aside class="card sidebar"><a href="admin.php">Dashboard</a><a href="admin.php?action=products">Produtos</a><a href="admin.php?action=orders">Pedidos</a><a href="validator.php" target="_blank">Validador</a><a href="./">Loja</a></aside><main>
 <?php }
 function adminFoot():void{ ?></main></div></body></html><?php }
 
@@ -96,7 +96,7 @@ if($action==='products'){
     if(isset($_GET['edit'])){$s=db()->prepare("SELECT * FROM products WHERE id=?");$s->execute([(int)$_GET['edit']]);$edit=$s->fetch();}
     $rows=db()->query("SELECT * FROM products ORDER BY sort_order,id")->fetchAll();
     ?>
-    <div class="section-title"><div><span class="pill">Catálogo</span><h2>Produtos</h2></div><a class="btn btn-primary" href="/admin.php?action=products&new=1">Novo produto</a></div>
+    <div class="section-title"><div><span class="pill">Catálogo</span><h2>Produtos</h2></div><a class="btn btn-primary" href="admin.php?action=products&new=1">Novo produto</a></div>
     <?php if($edit||isset($_GET['new'])):
         $p=$edit?:['id'=>0,'sku'=>'','name'=>'','description'=>'','product_type'=>'ticket','price'=>'0.00','ncm'=>'','cest'=>'','duration_days'=>1,'validation_mode'=>'once_total','requires_visitor'=>1,'active'=>1,'sort_order'=>0];
     ?>
@@ -119,7 +119,7 @@ if($action==='products'){
     </form>
     <?php endif; ?>
     <div class="card panel table-wrap"><table><thead><tr><th>SKU</th><th>Produto</th><th>Tipo</th><th>Preço</th><th>NCM</th><th>CEST</th><th>Status</th><th></th></tr></thead><tbody>
-    <?php foreach($rows as $p): ?><tr><td><?=e($p['sku'])?></td><td><strong><?=e($p['name'])?></strong><br><small><?=e($p['description'])?></small></td><td><?=e($p['product_type'])?></td><td><?=money($p['price'])?></td><td><?=e($p['ncm']?:'—')?></td><td><?=e($p['cest']?:'—')?></td><td><span class="status <?=$p['active']?'active':'blocked'?>"><?=$p['active']?'Ativo':'Inativo'?></span></td><td><a href="/admin.php?action=products&edit=<?=(int)$p['id']?>">Editar</a></td></tr><?php endforeach; ?>
+    <?php foreach($rows as $p): ?><tr><td><?=e($p['sku'])?></td><td><strong><?=e($p['name'])?></strong><br><small><?=e($p['description'])?></small></td><td><?=e($p['product_type'])?></td><td><?=money($p['price'])?></td><td><?=e($p['ncm']?:'—')?></td><td><?=e($p['cest']?:'—')?></td><td><span class="status <?=$p['active']?'active':'blocked'?>"><?=$p['active']?'Ativo':'Inativo'?></span></td><td><a href="admin.php?action=products&edit=<?=(int)$p['id']?>">Editar</a></td></tr><?php endforeach; ?>
     </tbody></table></div>
     <?php adminFoot();exit;
 }
@@ -132,11 +132,11 @@ if($action==='orders'){
         $s=db()->prepare("SELECT t.*,v.first_name,v.last_name,v.email,v.phone,v.document_type,v.document_number,v.sex,v.id visitor_id,p.name product_name FROM tickets t JOIN visitors v ON v.id=t.visitor_id JOIN products p ON p.id=t.product_id WHERE t.order_id=?");
         $s->execute([$id]);$tickets=$s->fetchAll();
         ?>
-        <div class="section-title"><div><span class="pill">Pedido</span><h2><?=e($o['order_code'])?></h2></div><a href="/admin.php?action=orders">Voltar</a></div>
+        <div class="section-title"><div><span class="pill">Pedido</span><h2><?=e($o['order_code'])?></h2></div><a href="admin.php?action=orders">Voltar</a></div>
         <div class="card panel"><p><strong>Status:</strong> <span class="status <?=e($o['status'])?>"><?=e($o['status'])?></span> · <strong>Integração:</strong> <span class="status <?=e($o['integration_status'])?>"><?=e($o['integration_status'])?></span></p><p><strong>Comprador:</strong> <?=e($o['buyer_email'])?> · <?=e($o['buyer_phone'])?></p><p><strong>Total:</strong> <?=money($o['total'])?></p></div>
         <h3 style="color:var(--navy)">Visitantes / ingressos</h3>
         <div class="card panel table-wrap"><table><thead><tr><th>Foto</th><th>Visitante</th><th>Documento</th><th>Ingresso</th><th>Validade</th><th>Código</th></tr></thead><tbody>
-        <?php foreach($tickets as $t): ?><tr><td><img src="/admin.php?action=photo&id=<?=(int)$t['visitor_id']?>" style="width:64px;height:64px;object-fit:cover;border-radius:14px"></td><td><strong><?=e($t['first_name'].' '.$t['last_name'])?></strong><br><small><?=e($t['email'])?> · <?=e($t['phone'])?></small></td><td><?=e($t['document_type'].' '.$t['document_number'])?></td><td><?=e($t['product_name'])?></td><td><?=e(date('d/m/Y',strtotime($t['valid_from'])))?> → <?=e(date('d/m/Y',strtotime($t['valid_to'])))?></td><td class="ticket-code"><?=e($t['ticket_code'])?></td></tr><?php endforeach; ?>
+        <?php foreach($tickets as $t): ?><tr><td><img src="admin.php?action=photo&id=<?=(int)$t['visitor_id']?>" style="width:64px;height:64px;object-fit:cover;border-radius:14px"></td><td><strong><?=e($t['first_name'].' '.$t['last_name'])?></strong><br><small><?=e($t['email'])?> · <?=e($t['phone'])?></small></td><td><?=e($t['document_type'].' '.$t['document_number'])?></td><td><?=e($t['product_name'])?></td><td><?=e(date('d/m/Y',strtotime($t['valid_from'])))?> → <?=e(date('d/m/Y',strtotime($t['valid_to'])))?></td><td class="ticket-code"><?=e($t['ticket_code'])?></td></tr><?php endforeach; ?>
         </tbody></table></div>
         <?php adminFoot();exit;
     }
@@ -145,7 +145,7 @@ if($action==='orders'){
     ?>
     <div class="section-title"><div><span class="pill">Operação</span><h2>Pedidos</h2></div><p>Últimos 300 pedidos.</p></div>
     <div class="card panel table-wrap"><table><thead><tr><th>Pedido</th><th>Data</th><th>Comprador</th><th>Total</th><th>Status</th><th>Integração</th></tr></thead><tbody>
-    <?php foreach($rows as $o): ?><tr><td><a href="/admin.php?action=orders&id=<?=(int)$o['id']?>"><strong><?=e($o['order_code'])?></strong></a></td><td><?=e(date('d/m/Y H:i',strtotime($o['created_at'])))?></td><td><?=e($o['buyer_email'])?></td><td><?=money($o['total'])?></td><td><span class="status <?=e($o['status'])?>"><?=e($o['status'])?></span></td><td><span class="status <?=e($o['integration_status'])?>"><?=e($o['integration_status'])?></span></td></tr><?php endforeach; ?>
+    <?php foreach($rows as $o): ?><tr><td><a href="admin.php?action=orders&id=<?=(int)$o['id']?>"><strong><?=e($o['order_code'])?></strong></a></td><td><?=e(date('d/m/Y H:i',strtotime($o['created_at'])))?></td><td><?=e($o['buyer_email'])?></td><td><?=money($o['total'])?></td><td><span class="status <?=e($o['status'])?>"><?=e($o['status'])?></span></td><td><span class="status <?=e($o['integration_status'])?>"><?=e($o['integration_status'])?></span></td></tr><?php endforeach; ?>
     </tbody></table></div>
     <?php adminFoot();exit;
 }

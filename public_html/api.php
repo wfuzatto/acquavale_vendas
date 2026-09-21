@@ -5,8 +5,8 @@ require_api_key();$action=$_GET['action']??'';$in=json_input();$pdo=db();
 try{
  if($action==='health')json_response(['ok'=>true,'service'=>'acquavale-vendas','time'=>date(DATE_ATOM)]);
  if($action==='sale-next'){
-  $consumer=trim((string)($in['consumer']??'default'))?:'default';$ttl=max(1,(int)(env('INTEGRATION_CLAIM_TTL_MINUTES','10')??10));
-  $pdo->beginTransaction();$s=$pdo->prepare("SELECT * FROM orders WHERE status='paid' AND (integration_status='pending' OR (integration_status='claimed' AND integration_claimed_at<DATE_SUB(NOW(),INTERVAL ? MINUTE))) ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED");$s->execute([$ttl]);$o=$s->fetch();
+  $consumer=trim((string)($in['consumer']??'default'))?:'default';$ttl=max(1,(int)cfg('api.claim_ttl_minutes',10));$cutoff=date('Y-m-d H:i:s',time()-($ttl*60));
+  $pdo->beginTransaction();$s=$pdo->prepare("SELECT * FROM orders WHERE status='paid' AND (integration_status='pending' OR (integration_status='claimed' AND integration_claimed_at<?)) ORDER BY id LIMIT 1 FOR UPDATE");$s->execute([$cutoff]);$o=$s->fetch();
   if(!$o){$pdo->commit();json_response(['ok'=>true,'sale'=>null]);}
   $claim=bin2hex(random_bytes(32));$pdo->prepare("UPDATE orders SET integration_status='claimed',integration_claim_token=?,integration_claimed_at=NOW(),updated_at=NOW() WHERE id=?")->execute([$claim,$o['id']]);
   $s=$pdo->prepare("SELECT * FROM order_items WHERE order_id=? ORDER BY id");$s->execute([$o['id']]);$items=$s->fetchAll();
@@ -33,11 +33,11 @@ try{
   if($t['validation_mode']==='once_total'){$s=$pdo->prepare("SELECT COUNT(*) FROM ticket_redemptions WHERE ticket_id=?");$s->execute([$t['id']]);if((int)$s->fetchColumn()>0){$pdo->rollBack();json_response(['ok'=>true,'valid'=>false,'reason'=>'already_used']);}}
   elseif($t['validation_mode']==='once_per_day'){$s=$pdo->prepare("SELECT COUNT(*) FROM ticket_redemptions WHERE ticket_id=? AND visit_date=?");$s->execute([$t['id'],$today]);if((int)$s->fetchColumn()>0){$pdo->rollBack();json_response(['ok'=>true,'valid'=>false,'reason'=>'already_used_today']);}}
   if($t['validation_mode']!=='unlimited_validity'){$pdo->prepare("INSERT INTO ticket_redemptions(ticket_id,visit_date,gate_code,idempotency_key,validated_at,source_ip) VALUES(?,?,?,?,NOW(),?)")->execute([$t['id'],$today,$gate,$idem,client_ip()]);if($t['validation_mode']==='once_total')$pdo->prepare("UPDATE tickets SET status='used' WHERE id=?")->execute([$t['id']]);}
-  $pdo->commit();json_response(['ok'=>true,'valid'=>true,'ticket'=>['ticket_code'=>$t['ticket_code'],'product'=>$t['product_name'],'visitor_id'=>(int)$t['visitor_id'],'visitor_name'=>$t['first_name'].' '.$t['last_name'],'document_type'=>$t['document_type'],'document_last4'=>substr($t['document_number'],-4),'valid_from'=>$t['valid_from'],'valid_to'=>$t['valid_to'],'photo_endpoint'=>'/api.php?action=visitor-photo&visitor_id='.(int)$t['visitor_id']]]);
+  $pdo->commit();json_response(['ok'=>true,'valid'=>true,'ticket'=>['ticket_code'=>$t['ticket_code'],'product'=>$t['product_name'],'visitor_id'=>(int)$t['visitor_id'],'visitor_name'=>$t['first_name'].' '.$t['last_name'],'document_type'=>$t['document_type'],'document_last4'=>substr($t['document_number'],-4),'valid_from'=>$t['valid_from'],'valid_to'=>$t['valid_to'],'photo_endpoint'=>url('api.php?action=visitor-photo&visitor_id='.(int)$t['visitor_id'])]]);
  }
  if($action==='visitor-photo'){
   $id=(int)($_GET['visitor_id']??0);$s=$pdo->prepare("SELECT v.photo_path FROM visitors v JOIN orders o ON o.id=v.order_id WHERE v.id=? AND o.status='paid'");$s->execute([$id]);$v=$s->fetch();if(!$v){http_response_code(404);exit;}
   $file=STORAGE_ROOT.'/private/visitors/'.basename($v['photo_path']);if(!is_file($file)){http_response_code(404);exit;}header('Content-Type: '.((new finfo(FILEINFO_MIME_TYPE))->file($file)?:'application/octet-stream'));header('Cache-Control: private, no-store');readfile($file);exit;
  }
  json_response(['ok'=>false,'error'=>'unknown_action'],404);
-}catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log((string)$e);json_response(['ok'=>false,'error'=>'internal_error','message'=>env('APP_DEBUG','false')==='true'?$e->getMessage():null],500);}
+}catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();error_log((string)$e);json_response(['ok'=>false,'error'=>'internal_error','message'=>(bool)cfg('app.debug',false)?$e->getMessage():null],500);}

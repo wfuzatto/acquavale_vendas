@@ -1,0 +1,28 @@
+<?php
+return [
+    'app' => [
+        'url' => 'https://ingressos.seudominio.com.br',
+        'base_path' => '',
+        'timezone' => 'America/Sao_Paulo',
+        'debug' => false,
+        'session_secure' => true,
+    ],
+    'db' => [
+        'host' => 'localhost',
+        'port' => 3306,
+        'name' => 'cpanelusuario_acquavale',
+        'user' => 'cpanelusuario_acquavale',
+        'password' => 'TROQUE_AQUI',
+    ],
+    'admin' => [
+        'email' => 'admin@seudominio.com.br',
+        'password_hash' => '$2y$12$SUBSTITUA_POR_HASH_GERADO',
+    ],
+    'api' => [
+        'key' => 'SUBSTITUA_POR_UMA_CHAVE_LONGA_E_ALEATORIA',
+        'claim_ttl_minutes' => 10,
+    ],
+    'uploads' => [
+        'max_photo_mb' => 8,
+    ],
+];

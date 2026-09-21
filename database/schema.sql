@@ -1,6 +1,3 @@
-CREATE DATABASE IF NOT EXISTS acquavale_vendas CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE acquavale_vendas;
-
 CREATE TABLE IF NOT EXISTS products (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
  sku VARCHAR(40) NOT NULL UNIQUE,
@@ -18,7 +15,7 @@ CREATE TABLE IF NOT EXISTS products (
  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
  INDEX idx_products_active_sort (active,sort_order)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS orders (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -38,7 +35,7 @@ CREATE TABLE IF NOT EXISTS orders (
  updated_at DATETIME NOT NULL,
  INDEX idx_orders_status_created(status,created_at),
  INDEX idx_orders_integration(integration_status,integration_claimed_at)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS order_items (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -52,7 +49,7 @@ CREATE TABLE IF NOT EXISTS order_items (
  created_at DATETIME NOT NULL,
  CONSTRAINT fk_order_items_order FOREIGN KEY(order_id) REFERENCES orders(id),
  CONSTRAINT fk_order_items_product FOREIGN KEY(product_id) REFERENCES products(id)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS visitors (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -69,7 +66,7 @@ CREATE TABLE IF NOT EXISTS visitors (
  created_at DATETIME NOT NULL,
  CONSTRAINT fk_visitors_order FOREIGN KEY(order_id) REFERENCES orders(id),
  INDEX idx_visitors_document(document_type,document_number)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS tickets (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -86,7 +83,7 @@ CREATE TABLE IF NOT EXISTS tickets (
  CONSTRAINT fk_tickets_product FOREIGN KEY(product_id) REFERENCES products(id),
  CONSTRAINT fk_tickets_visitor FOREIGN KEY(visitor_id) REFERENCES visitors(id),
  INDEX idx_tickets_validity(status,valid_from,valid_to)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS ticket_redemptions (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -99,7 +96,7 @@ CREATE TABLE IF NOT EXISTS ticket_redemptions (
  CONSTRAINT fk_redemptions_ticket FOREIGN KEY(ticket_id) REFERENCES tickets(id),
  UNIQUE KEY uq_ticket_day(ticket_id,visit_date),
  UNIQUE KEY uq_redemption_idempotency(idempotency_key)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS integration_receipts (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -109,7 +106,7 @@ CREATE TABLE IF NOT EXISTS integration_receipts (
  processed_at DATETIME NOT NULL,
  CONSTRAINT fk_integration_receipts_order FOREIGN KEY(order_id) REFERENCES orders(id),
  UNIQUE KEY uq_order_consumer(order_id,consumer)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS audit_log (
  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -121,4 +118,4 @@ CREATE TABLE IF NOT EXISTS audit_log (
  ip VARCHAR(64) NULL,
  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
  INDEX idx_audit_created(created_at)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
