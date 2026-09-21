@@ -46,7 +46,7 @@ foreach ($products as $product) {
 
 $currentStep = $order ? ($order['status'] === 'paid' ? 6 : 5) : 1;
 
-function renderSteps(int $current): void
+function renderSteps(int $current, bool $interactive = false): void
 {
     $steps = [
         1 => ['Ingresso', 'Escolha e quantidade'],
@@ -61,6 +61,22 @@ function renderSteps(int $current): void
         <?php foreach ($steps as $number => [$title, $subtitle]):
             $class = $number < $current ? 'is-done' : ($number === $current ? 'is-active' : '');
         ?>
+        <?php if ($interactive): ?>
+        <button
+            class="wizard-progress-item <?=$class?>"
+            type="button"
+            data-progress-step="<?=$number?>"
+            data-flow-step="<?=$number?>"
+            aria-label="Ir para etapa <?=$number?>: <?=e($title)?>"
+            <?=$number > $current ? 'aria-disabled="true"' : ''?>
+        >
+            <div class="wizard-number"><?=$number?></div>
+            <div class="wizard-progress-copy">
+                <strong><?=e($title)?></strong>
+                <span><?=e($subtitle)?></span>
+            </div>
+        </button>
+        <?php else: ?>
         <div class="wizard-progress-item <?=$class?>" data-progress-step="<?=$number?>">
             <div class="wizard-number"><?=$number?></div>
             <div class="wizard-progress-copy">
@@ -68,6 +84,7 @@ function renderSteps(int $current): void
                 <span><?=e($subtitle)?></span>
             </div>
         </div>
+        <?php endif; ?>
         <?php endforeach; ?>
     </div>
     <?php
@@ -77,7 +94,7 @@ function renderSteps(int $current): void
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>Ingressos | AcquaVale Park</title>
 <meta name="description" content="Compre ingressos e adicionais para o AcquaVale Park.">
 <link rel="stylesheet" href="assets/css/app.css">
@@ -253,7 +270,7 @@ function renderSteps(int $current): void
 
     <section class="wizard-wrap" id="compra">
         <div class="container">
-            <?php renderSteps(1); ?>
+            <?php renderSteps(1, true); ?>
 
             <?php if ($error): ?>
                 <div class="notice error wizard-error"><?=e($error)?></div>
