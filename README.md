@@ -23,7 +23,7 @@ O DocumentRoot do domínio/subdomínio deve apontar para `public_html/`.
 - loja responsiva no visual AcquaVale;
 - produtos com nome, SKU, preço, NCM, CEST, tipo, duração e regra de validação;
 - ingresso de 1 dia, 2 dias e locker como exemplos iniciais;
-- fluxo de compra em 6 etapas: escolha/quantidade, cadastro individual das pessoas, regras, resumo, pagamento e QR Codes;
+- fluxo de compra com Passo 0 obrigatório para validar a reserva no Expresso, seguido de ingressos, cadastro individual das pessoas, regras, resumo, pagamento e QR Codes;
 - cada unidade de ingresso exige um cadastro completo próprio; por exemplo, 3 ingressos de 2 dias geram 3 pessoas e 3 QR Codes;
 - nome, sobrenome, e-mail, telefone, data de entrada, CPF/RG/CNH, sexo e foto por visitante;
 - foto pela câmera ou galeria;
@@ -37,6 +37,10 @@ O DocumentRoot do domínio/subdomínio deve apontar para `public_html/`.
 - validação transacional e idempotente;
 - fila de integração de vendas com claim + ACK, evitando duplicidade de efeito;
 - instalador web para cPanel.
+
+## Banco de dados
+
+Todas as tabelas próprias do sistema usam o prefixo fixo `acquavale_vendas_`, evitando colisões quando o mesmo banco MySQL atende outras aplicações. Instalações antigas sem prefixo são migradas automaticamente.
 
 ## Instalação rápida
 
