@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__).'/config/bootstrap.php';
 
-use AcquaVale\ExpressoReservationService;
+use AcquaVale\IPlateReservationService;
 
 if ($_SERVER['REQUEST_METHOD']!=='POST') {
     json_response(['ok'=>false,'error'=>'method_not_allowed'],405);
