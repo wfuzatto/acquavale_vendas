@@ -11,6 +11,15 @@ final class OrderService
 {
     public function create(array $payload, array $photos): array
     {
+        $sessionReservation=$_SESSION['validated_reservation']??null;
+        if (!is_array($sessionReservation) || trim((string)($sessionReservation['reservation_code']??''))==='') {
+            throw new RuntimeException('Localize e valide sua reserva antes de iniciar a compra.');
+        }
+
+        // Double check server-side: nunca confia apenas no passo visual do navegador.
+        $reservation=(new ExpressoReservationService())->lookup((string)$sessionReservation['reservation_code']);
+        $_SESSION['validated_reservation']=$reservation;
+
         $cart = $payload['cart'] ?? [];
         if (is_string($cart)) {
             $cart = json_decode($cart, true) ?: [];
@@ -88,10 +97,30 @@ final class OrderService
             $orderCode = \random_code('PED');
             $stmt = $pdo->prepare(
                 "INSERT INTO orders
-                (order_code,buyer_email,buyer_phone,status,payment_status,subtotal,total,integration_status,created_at,updated_at)
-                VALUES (?,?,?,'pending_payment','pending',?,?,'not_ready',NOW(),NOW())"
+                (order_code,buyer_email,buyer_phone,
+                 expresso_reservation_id,expresso_reservation_code,expresso_guest_name,expresso_guest_cpf,
+                 expresso_checkin_date,expresso_checkout_date,expresso_adults,expresso_children,expresso_uh,
+                 expresso_reservation_snapshot,reservation_verified_at,
+                 status,payment_status,subtotal,total,integration_status,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,NOW(),'pending_payment','pending',?,?,'not_ready',NOW(),NOW())"
             );
-            $stmt->execute([$orderCode, $buyerEmail, $buyerPhone, $subtotal, $subtotal]);
+            $stmt->execute([
+                $orderCode,
+                $buyerEmail,
+                $buyerPhone,
+                $reservation['reservation_id']??null,
+                $reservation['reservation_code']??null,
+                $reservation['guest_name']??null,
+                $reservation['guest_cpf']??null,
+                $reservation['checkin_date']??null,
+                $reservation['checkout_date']??null,
+                $reservation['adults']??null,
+                $reservation['children']??null,
+                $reservation['uh']??null,
+                json_encode($reservation,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES),
+                $subtotal,
+                $subtotal,
+            ]);
             $orderId = (int)$pdo->lastInsertId();
 
             foreach ($normalized as $productId => $qty) {
@@ -199,6 +228,8 @@ final class OrderService
                 'terms_accepted' => true,
                 'biometric_consent' => true,
                 'visitor_count' => $ticketUnits,
+                'expresso_reservation_code' => $reservation['reservation_code']??null,
+                'expresso_reservation_id' => $reservation['reservation_id']??null,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
             $stmt = $pdo->prepare(
@@ -215,6 +246,7 @@ final class OrderService
             ]);
 
             $pdo->commit();
+            unset($_SESSION['validated_reservation']);
 
             return [
                 'id' => $orderId,
