@@ -51,14 +51,16 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
         $adminPassword=(string)($_POST['admin_password']??'');
         $basePath=trim((string)($_POST['base_path']??$detectedBase));
         $appUrl=rtrim(trim((string)($_POST['app_url']??$detectedUrl)),'/');
-        $expressoUser=trim((string)($_POST['expresso_user']??''));
-        $expressoPassword=(string)($_POST['expresso_password']??'');
+        $iplateServerUrl=rtrim(trim((string)($_POST['iplate_server_url']??'https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php')),'/');
+        $iplateUsername=trim((string)($_POST['iplate_username']??''));
+        $iplatePassword=(string)($_POST['iplate_password']??'');
 
         if($dbName===''||$dbUser==='') throw new RuntimeException('Informe o banco e o usuário MySQL criados no cPanel.');
         if(!filter_var($adminEmail,FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Informe um e-mail administrativo válido.');
         if(strlen($adminPassword)<10) throw new RuntimeException('A senha administrativa deve ter pelo menos 10 caracteres.');
-        if($expressoUser==='') throw new RuntimeException('Informe o usuário da API Expresso.');
-        if($expressoPassword==='') throw new RuntimeException('Informe a senha da API Expresso.');
+        if($iplateServerUrl==='') throw new RuntimeException('Informe a URL do backend iPlate.');
+        if($iplateUsername==='') throw new RuntimeException('Informe o usuário do backend iPlate.');
+        if($iplatePassword==='') throw new RuntimeException('Informe a senha do backend iPlate.');
 
         $pdo=new PDO(
             "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4",
@@ -101,11 +103,10 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
             'uploads'=>[
                 'max_photo_mb'=>8,
             ],
-            'expresso'=>[
-                'token_url'=>'https://vale.expresso.app/api/obter_token',
-                'reservation_url'=>'https://vale.expresso.app/api/reserva',
-                'user'=>$expressoUser,
-                'password'=>$expressoPassword,
+            'iplate'=>[
+                'server_url'=>$iplateServerUrl,
+                'username'=>$iplateUsername,
+                'password'=>$iplatePassword,
                 'timeout_seconds'=>20,
             ],
         ];
@@ -156,9 +157,10 @@ $checks=[
 <div class="form-group"><label>Senha administrador</label><input type="password" name="admin_password" minlength="10" required autocomplete="new-password"></div>
 <div class="form-group"><label>URL do sistema</label><input name="app_url" value="<?=htmlspecialchars((string)($_POST['app_url']??$detectedUrl))?>" required></div>
 <div class="form-group"><label>Caminho base</label><input name="base_path" value="<?=htmlspecialchars((string)($_POST['base_path']??$detectedBase))?>" placeholder="/ingressos"><small>Deixe vazio quando o domínio/subdomínio apontar diretamente para public_html.</small></div>
-<div class="form-group full" style="margin-top:10px"><div class="notice"><strong>Integração Expresso:</strong> use as mesmas credenciais já configuradas no iPlate. Elas ficam somente no <code>config.local.php</code>.</div></div>
-<div class="form-group"><label>Usuário API Expresso</label><input type="email" name="expresso_user" value="<?=htmlspecialchars((string)($_POST['expresso_user']??''))?>" placeholder="usuario@dominio.com.br" autocomplete="username" required><small>Credencial usada para obter o token da API Expresso.</small></div>
-<div class="form-group"><label>Senha API Expresso</label><input type="password" name="expresso_password" autocomplete="new-password" required><small>A senha é gravada somente no <code>config/config.local.php</code> e não vai para o GitHub.</small></div>
+<div class="form-group full" style="margin-top:10px"><div class="notice"><strong>Validação de reservas via iPlate:</strong> o AcquaVale Vendas fará login no mesmo backend usado pelo app iPlate, receberá o <code>api_token</code> e consultará a reserva online antes de liberar a compra.</div></div>
+<div class="form-group full"><label>URL do backend iPlate</label><input name="iplate_server_url" value="<?=htmlspecialchars((string)($_POST['iplate_server_url']??'https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php'))?>" required><small>Pode manter a URL padrão do iPlate. O sistema deriva automaticamente <code>login.php</code> e <code>reservation-search.php</code>.</small></div>
+<div class="form-group"><label>Usuário do backend iPlate</label><input name="iplate_username" value="<?=htmlspecialchars((string)($_POST['iplate_username']??''))?>" autocomplete="username" required><small>Usuário usado no login do iPlate.</small></div>
+<div class="form-group"><label>Senha do backend iPlate</label><input type="password" name="iplate_password" autocomplete="new-password" required><small>Usada apenas no servidor para obter o <code>api_token</code>; não é enviada ao navegador nem versionada.</small></div>
 </div><button class="btn btn-primary" style="margin-top:20px">Instalar sistema</button></form></div>
 <?php endif;?>
 </div></body></html>
