@@ -31,7 +31,7 @@ $order = !empty($_GET['order'])
     ? $service->getOrderByCode((string)$_GET['order'])
     : null;
 
-$products = db()->query("SELECT * FROM products WHERE active=1 ORDER BY sort_order,id")->fetchAll();
+$products = db()->query("SELECT * FROM acquavale_vendas_products WHERE active=1 ORDER BY sort_order,id")->fetchAll();
 
 $productMeta = [];
 foreach ($products as $product) {
