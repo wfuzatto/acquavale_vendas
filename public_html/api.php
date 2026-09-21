@@ -28,7 +28,7 @@ try {
 
         $s=$pdo->prepare(
             "SELECT *
-             FROM orders
+             FROM acquavale_vendas_orders
              WHERE status='paid'
                AND (
                     integration_status='pending'
@@ -48,7 +48,7 @@ try {
 
         $claim=bin2hex(random_bytes(32));
         $pdo->prepare(
-            "UPDATE orders
+            "UPDATE acquavale_vendas_orders
              SET integration_status='claimed',
                  integration_claim_token=?,
                  integration_claim_consumer=?,
@@ -57,7 +57,7 @@ try {
              WHERE id=?"
         )->execute([$claim,$consumer,$o['id']]);
 
-        $s=$pdo->prepare("SELECT * FROM order_items WHERE order_id=? ORDER BY id");
+        $s=$pdo->prepare("SELECT * FROM acquavale_vendas_order_items WHERE order_id=? ORDER BY id");
         $s->execute([$o['id']]);
         $items=$s->fetchAll();
 
@@ -84,10 +84,10 @@ try {
                 ti.hcp_visitor_id,
                 ti.hcp_reference,
                 ti.confirmed_at
-             FROM tickets t
-             JOIN products p ON p.id=t.product_id
-             JOIN visitors v ON v.id=t.visitor_id
-             LEFT JOIN ticket_integrations ti
+             FROM acquavale_vendas_tickets t
+             JOIN acquavale_vendas_products p ON p.id=t.product_id
+             JOIN acquavale_vendas_visitors v ON v.id=t.visitor_id
+             LEFT JOIN acquavale_vendas_ticket_integrations ti
                     ON ti.ticket_id=t.id AND ti.consumer=?
              WHERE t.order_id=?
              ORDER BY t.id"
@@ -96,7 +96,7 @@ try {
         $tickets=$s->fetchAll();
 
         $init=$pdo->prepare(
-            "INSERT IGNORE INTO ticket_integrations(ticket_id,consumer,state,created_at,updated_at)
+            "INSERT IGNORE INTO acquavale_vendas_ticket_integrations(ticket_id,consumer,state,created_at,updated_at)
              VALUES(?,?,'pending',NOW(),NOW())"
         );
 
@@ -143,8 +143,8 @@ try {
 
         $s=$pdo->prepare(
             "SELECT t.id
-             FROM tickets t
-             JOIN orders o ON o.id=t.order_id
+             FROM acquavale_vendas_tickets t
+             JOIN acquavale_vendas_orders o ON o.id=t.order_id
              WHERE o.order_code=? AND t.ticket_code=? AND o.status='paid'
              LIMIT 1"
         );
@@ -167,7 +167,7 @@ try {
         $confirmedAt=$state==='confirmed' ? date('Y-m-d H:i:s') : null;
 
         $s=$pdo->prepare(
-            "INSERT INTO ticket_integrations
+            "INSERT INTO acquavale_vendas_ticket_integrations
                 (ticket_id,consumer,state,external_reservation_id,hcp_visitor_id,hcp_reference,message,details,last_attempt_at,confirmed_at,created_at,updated_at)
              VALUES
                 (?,?,?,?,?,?,?,?,NOW(),?,NOW(),NOW())
@@ -215,7 +215,7 @@ try {
 
         $pdo->beginTransaction();
 
-        $s=$pdo->prepare("SELECT * FROM orders WHERE order_code=? FOR UPDATE");
+        $s=$pdo->prepare("SELECT * FROM acquavale_vendas_orders WHERE order_code=? FOR UPDATE");
         $s->execute([$code]);
         $o=$s->fetch();
 
@@ -243,8 +243,8 @@ try {
             "SELECT
                 COUNT(*) total,
                 SUM(CASE WHEN ti.state='confirmed' THEN 1 ELSE 0 END) confirmed
-             FROM tickets t
-             LEFT JOIN ticket_integrations ti
+             FROM acquavale_vendas_tickets t
+             LEFT JOIN acquavale_vendas_ticket_integrations ti
                     ON ti.ticket_id=t.id AND ti.consumer=?
              WHERE t.order_id=?"
         );
@@ -265,7 +265,7 @@ try {
         }
 
         $pdo->prepare(
-            "INSERT INTO integration_receipts(order_id,consumer,external_reference,processed_at)
+            "INSERT INTO acquavale_vendas_integration_receipts(order_id,consumer,external_reference,processed_at)
              VALUES(?,?,?,NOW())
              ON DUPLICATE KEY UPDATE
                 external_reference=COALESCE(VALUES(external_reference),external_reference),
@@ -273,7 +273,7 @@ try {
         )->execute([$o['id'],$consumer,$external]);
 
         $pdo->prepare(
-            "UPDATE orders
+            "UPDATE acquavale_vendas_orders
              SET integration_status='processed',
                  integration_processed_at=NOW(),
                  updated_at=NOW()
@@ -314,10 +314,10 @@ try {
                 ti.message,
                 ti.last_attempt_at,
                 ti.confirmed_at
-             FROM orders o
-             JOIN tickets t ON t.order_id=o.id
-             JOIN visitors v ON v.id=t.visitor_id
-             LEFT JOIN ticket_integrations ti
+             FROM acquavale_vendas_orders o
+             JOIN acquavale_vendas_tickets t ON t.order_id=o.id
+             JOIN acquavale_vendas_visitors v ON v.id=t.visitor_id
+             LEFT JOIN acquavale_vendas_ticket_integrations ti
                     ON ti.ticket_id=t.id AND ti.consumer=?
              WHERE o.order_code=?
              ORDER BY t.id"
@@ -361,8 +361,8 @@ try {
         if ($idem) {
             $s=$pdo->prepare(
                 "SELECT tr.*,t.ticket_code
-                 FROM ticket_redemptions tr
-                 JOIN tickets t ON t.id=tr.ticket_id
+                 FROM acquavale_vendas_ticket_redemptions tr
+                 JOIN acquavale_vendas_tickets t ON t.id=tr.ticket_id
                  WHERE tr.idempotency_key=?"
             );
             $s->execute([$idem]);
@@ -389,10 +389,10 @@ try {
                 v.document_type,
                 v.document_number,
                 v.id visitor_id
-             FROM tickets t
-             JOIN orders o ON o.id=t.order_id
-             JOIN products p ON p.id=t.product_id
-             JOIN visitors v ON v.id=t.visitor_id
+             FROM acquavale_vendas_tickets t
+             JOIN acquavale_vendas_orders o ON o.id=t.order_id
+             JOIN acquavale_vendas_products p ON p.id=t.product_id
+             JOIN acquavale_vendas_visitors v ON v.id=t.visitor_id
              WHERE t.ticket_code=?
              FOR UPDATE"
         );
@@ -423,7 +423,7 @@ try {
         }
 
         if ($t['validation_mode']==='once_total') {
-            $s=$pdo->prepare("SELECT COUNT(*) FROM ticket_redemptions WHERE ticket_id=?");
+            $s=$pdo->prepare("SELECT COUNT(*) FROM acquavale_vendas_ticket_redemptions WHERE ticket_id=?");
             $s->execute([$t['id']]);
 
             if ((int)$s->fetchColumn()>0) {
@@ -431,7 +431,7 @@ try {
                 json_response(['ok'=>true,'valid'=>false,'reason'=>'already_used']);
             }
         } elseif ($t['validation_mode']==='once_per_day') {
-            $s=$pdo->prepare("SELECT COUNT(*) FROM ticket_redemptions WHERE ticket_id=? AND visit_date=?");
+            $s=$pdo->prepare("SELECT COUNT(*) FROM acquavale_vendas_ticket_redemptions WHERE ticket_id=? AND visit_date=?");
             $s->execute([$t['id'],$today]);
 
             if ((int)$s->fetchColumn()>0) {
@@ -442,12 +442,12 @@ try {
 
         if ($t['validation_mode']!=='unlimited_validity') {
             $pdo->prepare(
-                "INSERT INTO ticket_redemptions(ticket_id,visit_date,gate_code,idempotency_key,validated_at,source_ip)
+                "INSERT INTO acquavale_vendas_ticket_redemptions(ticket_id,visit_date,gate_code,idempotency_key,validated_at,source_ip)
                  VALUES(?,?,?,?,NOW(),?)"
             )->execute([$t['id'],$today,$gate,$idem,client_ip()]);
 
             if ($t['validation_mode']==='once_total') {
-                $pdo->prepare("UPDATE tickets SET status='used' WHERE id=?")->execute([$t['id']]);
+                $pdo->prepare("UPDATE acquavale_vendas_tickets SET status='used' WHERE id=?")->execute([$t['id']]);
             }
         }
 
@@ -474,8 +474,8 @@ try {
         $id=(int)($_GET['visitor_id']??0);
         $s=$pdo->prepare(
             "SELECT v.photo_path
-             FROM visitors v
-             JOIN orders o ON o.id=v.order_id
+             FROM acquavale_vendas_visitors v
+             JOIN acquavale_vendas_orders o ON o.id=v.order_id
              WHERE v.id=? AND o.status='paid'"
         );
         $s->execute([$id]);
