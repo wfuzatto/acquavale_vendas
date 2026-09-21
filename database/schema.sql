@@ -22,6 +22,17 @@ CREATE TABLE IF NOT EXISTS orders (
  order_code VARCHAR(32) NOT NULL UNIQUE,
  buyer_email VARCHAR(190) NOT NULL,
  buyer_phone VARCHAR(40) NOT NULL,
+ expresso_reservation_id VARCHAR(190) NULL,
+ expresso_reservation_code VARCHAR(100) NULL,
+ expresso_guest_name VARCHAR(190) NULL,
+ expresso_guest_cpf VARCHAR(40) NULL,
+ expresso_checkin_date VARCHAR(40) NULL,
+ expresso_checkout_date VARCHAR(40) NULL,
+ expresso_adults VARCHAR(20) NULL,
+ expresso_children VARCHAR(20) NULL,
+ expresso_uh VARCHAR(80) NULL,
+ expresso_reservation_snapshot JSON NULL,
+ reservation_verified_at DATETIME NULL,
  status ENUM('pending_payment','paid','cancelled','refunded') NOT NULL DEFAULT 'pending_payment',
  payment_status ENUM('pending','approved','declined','refunded') NOT NULL DEFAULT 'pending',
  subtotal DECIMAL(12,2) NOT NULL,
@@ -35,7 +46,8 @@ CREATE TABLE IF NOT EXISTS orders (
  created_at DATETIME NOT NULL,
  updated_at DATETIME NOT NULL,
  INDEX idx_orders_status_created(status,created_at),
- INDEX idx_orders_integration(integration_status,integration_claimed_at)
+ INDEX idx_orders_integration(integration_status,integration_claimed_at),
+ INDEX idx_orders_expresso_reservation(expresso_reservation_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS order_items (
