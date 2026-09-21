@@ -57,6 +57,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
         if($dbName===''||$dbUser==='') throw new RuntimeException('Informe o banco e o usuário MySQL criados no cPanel.');
         if(!filter_var($adminEmail,FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Informe um e-mail administrativo válido.');
         if(strlen($adminPassword)<10) throw new RuntimeException('A senha administrativa deve ter pelo menos 10 caracteres.');
+        if($expressoUser==='') throw new RuntimeException('Informe o usuário da API Expresso.');
+        if($expressoPassword==='') throw new RuntimeException('Informe a senha da API Expresso.');
 
         $pdo=new PDO(
             "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4",
@@ -155,8 +157,8 @@ $checks=[
 <div class="form-group"><label>URL do sistema</label><input name="app_url" value="<?=htmlspecialchars((string)($_POST['app_url']??$detectedUrl))?>" required></div>
 <div class="form-group"><label>Caminho base</label><input name="base_path" value="<?=htmlspecialchars((string)($_POST['base_path']??$detectedBase))?>" placeholder="/ingressos"><small>Deixe vazio quando o domínio/subdomínio apontar diretamente para public_html.</small></div>
 <div class="form-group full" style="margin-top:10px"><div class="notice"><strong>Integração Expresso:</strong> use as mesmas credenciais já configuradas no iPlate. Elas ficam somente no <code>config.local.php</code>.</div></div>
-<div class="form-group"><label>Usuário API Expresso</label><input name="expresso_user" value="<?=htmlspecialchars((string)($_POST['expresso_user']??''))?>" autocomplete="off"></div>
-<div class="form-group"><label>Senha API Expresso</label><input type="password" name="expresso_password" autocomplete="new-password"></div>
+<div class="form-group"><label>Usuário API Expresso</label><input type="email" name="expresso_user" value="<?=htmlspecialchars((string)($_POST['expresso_user']??''))?>" placeholder="usuario@dominio.com.br" autocomplete="username" required><small>Credencial usada para obter o token da API Expresso.</small></div>
+<div class="form-group"><label>Senha API Expresso</label><input type="password" name="expresso_password" autocomplete="new-password" required><small>A senha é gravada somente no <code>config/config.local.php</code> e não vai para o GitHub.</small></div>
 </div><button class="btn btn-primary" style="margin-top:20px">Instalar sistema</button></form></div>
 <?php endif;?>
 </div></body></html>
