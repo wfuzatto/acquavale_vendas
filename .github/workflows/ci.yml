@@ -16,4 +16,5 @@ jobs:
       - name: Lint PHP
         run: find app config public_html -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Autoload smoke test
-        run: php -r "require 'config/bootstrap.php'; exit(class_exists('AcquaVale\\IPlateReservationService') ? 0 : 1);"
+        run: |
+          php -r "require 'config/bootstrap.php'; exit(class_exists('AcquaVale\\IPlateReservationService') ? 0 : 1);"
