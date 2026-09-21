@@ -41,7 +41,7 @@ final class OrderService
         }
 
         $placeholders = implode(',', array_fill(0, count($normalized), '?'));
-        $stmt = \db()->prepare("SELECT * FROM products WHERE id IN ($placeholders) AND active=1");
+        $stmt = \db()->prepare("SELECT * FROM acquavale_vendas_products WHERE id IN ($placeholders) AND active=1");
         $stmt->execute(array_keys($normalized));
 
         $products = [];
@@ -96,7 +96,7 @@ final class OrderService
 
             $orderCode = \random_code('PED');
             $stmt = $pdo->prepare(
-                "INSERT INTO orders
+                "INSERT INTO acquavale_vendas_orders
                 (order_code,buyer_email,buyer_phone,
                  expresso_reservation_id,expresso_reservation_code,expresso_guest_name,expresso_guest_cpf,
                  expresso_checkin_date,expresso_checkout_date,expresso_adults,expresso_children,expresso_uh,
@@ -126,7 +126,7 @@ final class OrderService
             foreach ($normalized as $productId => $qty) {
                 $product = $products[$productId];
                 $stmt = $pdo->prepare(
-                    "INSERT INTO order_items
+                    "INSERT INTO acquavale_vendas_order_items
                     (order_id,product_id,product_name,unit_price,quantity,ncm,cest,created_at)
                     VALUES (?,?,?,?,?,?,?,NOW())"
                 );
@@ -187,7 +187,7 @@ final class OrderService
                 $savedFiles[] = STORAGE_ROOT . '/private/visitors/' . $photoPath;
 
                 $stmt = $pdo->prepare(
-                    "INSERT INTO visitors
+                    "INSERT INTO acquavale_vendas_visitors
                     (order_id,first_name,last_name,email,phone,document_type,document_number,sex,photo_path,biometric_consent_at,created_at)
                     VALUES (?,?,?,?,?,?,?,?,?,NOW(),NOW())"
                 );
@@ -208,7 +208,7 @@ final class OrderService
                 $validTo = $entryDate->modify('+' . ($days - 1) . ' days')->format('Y-m-d');
 
                 $stmt = $pdo->prepare(
-                    "INSERT INTO tickets
+                    "INSERT INTO acquavale_vendas_tickets
                     (order_id,product_id,visitor_id,ticket_code,valid_from,valid_to,validation_mode,status,created_at)
                     VALUES (?,?,?,?,?,?,?,'pending',NOW())"
                 );
@@ -233,7 +233,7 @@ final class OrderService
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
             $stmt = $pdo->prepare(
-                "INSERT INTO audit_log(actor,action,entity_type,entity_id,metadata,ip)
+                "INSERT INTO acquavale_vendas_audit_log(actor,action,entity_type,entity_id,metadata,ip)
                  VALUES (?,?,?,?,?,?)"
             );
             $stmt->execute([
@@ -310,7 +310,7 @@ final class OrderService
         $pdo = \db();
         $pdo->beginTransaction();
 
-        $stmt = $pdo->prepare("SELECT status FROM orders WHERE id=? FOR UPDATE");
+        $stmt = $pdo->prepare("SELECT status FROM acquavale_vendas_orders WHERE id=? FOR UPDATE");
         $stmt->execute([$orderId]);
         $order = $stmt->fetch();
 
@@ -321,14 +321,14 @@ final class OrderService
 
         if ($order['status'] !== 'paid') {
             $pdo->prepare(
-                "UPDATE orders
+                "UPDATE acquavale_vendas_orders
                  SET status='paid',payment_status='approved',paid_at=NOW(),
                      integration_status='pending',updated_at=NOW()
                  WHERE id=?"
             )->execute([$orderId]);
 
             $pdo->prepare(
-                "UPDATE tickets SET status='active'
+                "UPDATE acquavale_vendas_tickets SET status='active'
                  WHERE order_id=? AND status='pending'"
             )->execute([$orderId]);
         }
@@ -338,7 +338,7 @@ final class OrderService
 
     public function getOrderByCode(string $code): ?array
     {
-        $stmt = \db()->prepare("SELECT * FROM orders WHERE order_code=?");
+        $stmt = \db()->prepare("SELECT * FROM acquavale_vendas_orders WHERE order_code=?");
         $stmt->execute([$code]);
         $order = $stmt->fetch();
 
@@ -346,7 +346,7 @@ final class OrderService
             return null;
         }
 
-        $stmt = \db()->prepare("SELECT * FROM order_items WHERE order_id=? ORDER BY id");
+        $stmt = \db()->prepare("SELECT * FROM acquavale_vendas_order_items WHERE order_id=? ORDER BY id");
         $stmt->execute([$order['id']]);
         $order['items'] = $stmt->fetchAll();
 
@@ -360,9 +360,9 @@ final class OrderService
                 v.document_type,
                 v.document_number,
                 p.name AS product_name
-             FROM tickets t
-             JOIN visitors v ON v.id=t.visitor_id
-             JOIN products p ON p.id=t.product_id
+             FROM acquavale_vendas_tickets t
+             JOIN acquavale_vendas_visitors v ON v.id=t.visitor_id
+             JOIN acquavale_vendas_products p ON p.id=t.product_id
              WHERE t.order_id=?
              ORDER BY t.id"
         );
