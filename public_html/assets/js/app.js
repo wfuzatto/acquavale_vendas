@@ -434,6 +434,12 @@
                     ? '1 dia de acesso'
                     : product.duration_days + ' dias de acesso';
 
+                const reservationGuestName = index === 0 ? String(reservation?.guest_name || '').trim() : '';
+                const reservationNameParts = reservationGuestName.split(/\s+/).filter(Boolean);
+                const reservationFirstName = reservationNameParts.shift() || '';
+                const reservationLastName = reservationNameParts.join(' ');
+                const reservationCpf = index === 0 ? String(reservation?.guest_cpf || '').trim() : '';
+
                 html += `
                 <article class="card person-card ${index === 0 ? 'is-open' : ''}" data-person-index="${index}">
                     <button class="person-card-head" type="button" data-person-toggle="${index}" aria-expanded="${index === 0 ? 'true' : 'false'}">
@@ -457,11 +463,11 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label>Nome</label>
-                                <input name="visitors[${index}][first_name]" required autocomplete="given-name" data-field-label="nome">
+                                <input name="visitors[${index}][first_name]" value="${escapeHtml(reservationFirstName)}" required autocomplete="given-name" data-field-label="nome">
                             </div>
                             <div class="form-group">
                                 <label>Sobrenome</label>
-                                <input name="visitors[${index}][last_name]" required autocomplete="family-name" data-field-label="sobrenome">
+                                <input name="visitors[${index}][last_name]" value="${escapeHtml(reservationLastName)}" required autocomplete="family-name" data-field-label="sobrenome">
                             </div>
 
                             <div class="form-group">
@@ -498,7 +504,7 @@
                             </div>
                             <div class="form-group">
                                 <label>Número do documento</label>
-                                <input name="visitors[${index}][document_number]" required autocomplete="off" data-field-label="número do documento">
+                                <input name="visitors[${index}][document_number]" value="${escapeHtml(reservationCpf)}" required autocomplete="off" data-field-label="número do documento">
                             </div>
 
                             <div class="form-group full photo-field">
