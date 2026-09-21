@@ -139,7 +139,13 @@ if($action==='orders'){
         $s->execute([$id]);$tickets=$s->fetchAll();
         ?>
         <div class="section-title"><div><span class="pill">Pedido</span><h2><?=e($o['order_code'])?></h2></div><a href="admin.php?action=orders">Voltar</a></div>
-        <div class="card panel"><p><strong>Status:</strong> <span class="status <?=e($o['status'])?>"><?=e($o['status'])?></span> · <strong>Integração:</strong> <span class="status <?=e($o['integration_status'])?>"><?=e($o['integration_status'])?></span></p><p><strong>Comprador:</strong> <?=e($o['buyer_email'])?> · <?=e($o['buyer_phone'])?></p><p><strong>Total:</strong> <?=money($o['total'])?></p></div>
+        <div class="card panel">
+            <p><strong>Status:</strong> <span class="status <?=e($o['status'])?>"><?=e($o['status'])?></span> · <strong>Integração:</strong> <span class="status <?=e($o['integration_status'])?>"><?=e($o['integration_status'])?></span></p>
+            <p><strong>Comprador:</strong> <?=e($o['buyer_email'])?> · <?=e($o['buyer_phone'])?></p>
+            <p><strong>Reserva Expresso:</strong> <?=e($o['expresso_reservation_code']?:'—')?> · <?=e($o['expresso_guest_name']?:'Hóspede não informado')?><?php if($o['expresso_uh']): ?> · UH <?=e($o['expresso_uh'])?><?php endif; ?></p>
+            <?php if($o['expresso_checkin_date']): ?><p><strong>Check-in:</strong> <?=e($o['expresso_checkin_date'])?><?php if($o['expresso_checkout_date']): ?> · <strong>Check-out:</strong> <?=e($o['expresso_checkout_date'])?><?php endif; ?></p><?php endif; ?>
+            <p><strong>Total:</strong> <?=money($o['total'])?></p>
+        </div>
         <h3 style="color:var(--navy)">Visitantes / ingressos</h3>
         <div class="card panel table-wrap"><table><thead><tr><th>Foto</th><th>Visitante</th><th>Documento</th><th>Ingresso</th><th>Validade</th><th>Código</th><th>HikCentral</th></tr></thead><tbody>
         <?php foreach($tickets as $t): ?>
