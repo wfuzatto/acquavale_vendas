@@ -150,6 +150,31 @@ final class IPlateReservationService
             }
         }
 
+        // Compatibilidade temporária com o backend iPlate antigo,
+        // que ainda não reconhecia exact=1 e limitava a busca ao dia atual.
+        $legacyUrl=$this->deriveApiUrl($serverUrl,'reservation-search.php')
+            .'?'.http_build_query([
+                'api_token'=>$token,
+                'term'=>$reservationCode,
+            ]);
+        $legacy=$this->getJson($legacyUrl,$timeout);
+        if ($legacy['http_code']===401) {
+            throw new UnauthorizedIPlateException();
+        }
+        if (
+            $legacy['error']==='' &&
+            $legacy['http_code']>=200 &&
+            $legacy['http_code']<300 &&
+            is_array($legacy['json'])
+        ) {
+            foreach (($legacy['json']['items']??[]) as $item) {
+                if (!is_array($item)) continue;
+                if ((string)($item['reservation_code']??'')===$reservationCode) {
+                    return $item;
+                }
+            }
+        }
+
         return null;
     }
 
