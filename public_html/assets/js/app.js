@@ -1,8 +1,10 @@
 (() => {
     const meta = window.AQV_PRODUCTS || {};
     const cart = {};
-    let currentStep = 1;
-    let maxUnlockedStep = 1;
+    let reservation = window.AQV_RESERVATION || null;
+    let reservationValidated = !!(reservation && reservation.reservation_code);
+    let currentStep = Number(window.AQV_INITIAL_STEP ?? (reservationValidated ? 1 : 0));
+    let maxUnlockedStep = reservationValidated ? Math.max(1, currentStep) : 0;
     let visitorsSignature = '';
 
     const brl = value => new Intl.NumberFormat('pt-BR', {
@@ -102,6 +104,172 @@
         document.body.classList.remove('modal-open');
     }
 
+
+    function displayDate(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '—';
+        const datePart = raw.slice(0, 10);
+        const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        return match ? match[3] + '/' + match[2] + '/' + match[1] : raw;
+    }
+
+    function updateReservationCard(data) {
+        const result = document.getElementById('reservation-result');
+        if (!result) return;
+
+        document.getElementById('reservation-result-name').textContent = data.guest_name || 'Hóspede da reserva';
+        document.getElementById('reservation-result-code').textContent = data.reservation_code || '—';
+        document.getElementById('reservation-result-checkin').textContent = displayDate(data.checkin_date);
+        document.getElementById('reservation-result-uh').textContent = data.uh || '—';
+
+        const guests = [];
+        if (data.adults) guests.push(data.adults + ' adulto(s)');
+        if (data.children) guests.push(data.children + ' criança(s)');
+        document.getElementById('reservation-result-guests').textContent = guests.join(' · ') || '—';
+
+        result.hidden = false;
+        result.classList.add('is-visible');
+    }
+
+    function setReservationLoading(loading) {
+        const button = document.getElementById('reservation-search-button');
+        const loadingEl = document.getElementById('reservation-loading');
+        if (button) {
+            button.disabled = loading;
+            button.textContent = loading ? 'Consultando...' : 'Procurar reserva';
+        }
+        if (loadingEl) loadingEl.hidden = !loading;
+    }
+
+    function resetPurchaseForReservation() {
+        Object.keys(cart).forEach(key => delete cart[key]);
+        document.querySelectorAll('[data-product-id]').forEach(input => {
+            input.value = 0;
+            input.closest('.product-card')?.classList.remove('is-selected');
+        });
+
+        visitorsSignature = '';
+        const visitors = document.getElementById('visitors');
+        if (visitors) visitors.innerHTML = '';
+
+        document.querySelectorAll('#checkout-form input[type="checkbox"]').forEach(input => {
+            input.checked = false;
+        });
+
+        const cartInput = document.getElementById('cart-json');
+        if (cartInput) cartInput.value = '{}';
+
+        maxUnlockedStep = reservationValidated ? 1 : 0;
+        updateStepOneSummary();
+        updateMobileCart();
+        updateHeaderCart();
+        updateProgress(currentStep);
+    }
+
+    async function lookupReservation() {
+        const input = document.getElementById('reservation-code');
+        const code = input?.value.trim() || '';
+
+        if (!code) {
+            openAppModal('Informe sua reserva', 'Digite o <strong>número da reserva</strong> para consultar o Expresso.', 'warning');
+            input?.focus();
+            return;
+        }
+
+        setReservationLoading(true);
+
+        try {
+            const response = await fetch(window.AQV_RESERVATION_ENDPOINT || 'reservation.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': window.AQV_CSRF || ''
+                },
+                body: JSON.stringify({
+                    action: 'lookup',
+                    reservation_code: code,
+                    _csrf: window.AQV_CSRF || ''
+                })
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.ok || !data.reservation) {
+                reservation = null;
+                reservationValidated = false;
+                maxUnlockedStep = 0;
+                updateProgress(0);
+                document.getElementById('reservation-result')?.setAttribute('hidden', '');
+                openAppModal(
+                    'Reserva não localizada',
+                    escapeHtml(data.message || 'Não foi possível validar esta reserva no Expresso. Confira o número e tente novamente.'),
+                    'error'
+                );
+                return;
+            }
+
+            reservation = data.reservation;
+            reservationValidated = true;
+            currentStep = 0;
+            resetPurchaseForReservation();
+            unlockStep(1);
+            updateReservationCard(reservation);
+
+            openAppModal(
+                'Reserva encontrada',
+                '<strong>' + escapeHtml(reservation.guest_name || 'Reserva validada') + '</strong><br>A compra de ingressos foi liberada para esta reserva.',
+                'success'
+            );
+        } catch (error) {
+            reservation = null;
+            reservationValidated = false;
+            maxUnlockedStep = 0;
+            updateProgress(0);
+            openAppModal(
+                'Falha na consulta',
+                'Não foi possível consultar o Expresso agora. Verifique a conexão e tente novamente.',
+                'error'
+            );
+        } finally {
+            setReservationLoading(false);
+        }
+    }
+
+    async function clearReservation() {
+        try {
+            await fetch(window.AQV_RESERVATION_ENDPOINT || 'reservation.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': window.AQV_CSRF || ''
+                },
+                body: JSON.stringify({
+                    action: 'clear',
+                    _csrf: window.AQV_CSRF || ''
+                })
+            });
+        } catch (_) {
+            // A limpeza local continua; o servidor também bloqueará checkout sem reserva validada.
+        }
+
+        reservation = null;
+        reservationValidated = false;
+        currentStep = 0;
+        maxUnlockedStep = 0;
+        resetPurchaseForReservation();
+
+        const input = document.getElementById('reservation-code');
+        if (input) input.value = '';
+
+        const result = document.getElementById('reservation-result');
+        if (result) {
+            result.hidden = true;
+            result.classList.remove('is-visible');
+        }
+
+        goToStep(0);
+        input?.focus();
+    }
+
     function readCart() {
         document.querySelectorAll('[data-product-id]').forEach(input => {
             const id = input.dataset.productId;
@@ -119,7 +287,7 @@
 
         const signature = cartSignature();
         if (visitorsSignature && signature !== visitorsSignature && maxUnlockedStep > 1) {
-            maxUnlockedStep = 1;
+            maxUnlockedStep = reservationValidated ? 1 : 0;
             visitorsSignature = '';
         }
 
@@ -642,6 +810,23 @@
         document.getElementById('compra')?.scrollIntoView({ behavior: 'smooth' });
     });
 
+    document.getElementById('reservation-search-button')?.addEventListener('click', lookupReservation);
+    document.getElementById('reservation-code')?.addEventListener('keydown', event => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            lookupReservation();
+        }
+    });
+    document.getElementById('reservation-change-button')?.addEventListener('click', clearReservation);
+    document.getElementById('continue-step-0')?.addEventListener('click', () => {
+        if (!reservationValidated) {
+            openAppModal('Valide sua reserva', 'Localize uma reserva válida antes de acessar os ingressos.', 'warning');
+            return;
+        }
+        unlockStep(1);
+        goToStep(1);
+    });
+
     document.getElementById('continue-step-1')?.addEventListener('click', continueFromProducts);
 
     document.getElementById('continue-step-2')?.addEventListener('click', () => {
@@ -660,8 +845,8 @@
 
     document.querySelectorAll('[data-flow-step]').forEach(button => {
         button.addEventListener('click', () => {
-            const target = Number(button.dataset.flowStep || 0);
-            if (!target || target === currentStep) return;
+            const target = Number(button.dataset.flowStep);
+            if (!Number.isInteger(target) || target < 0 || target === currentStep) return;
 
             if (target > maxUnlockedStep) {
                 openAppModal(
@@ -674,6 +859,11 @@
 
             if (target > currentStep) {
                 for (let step = currentStep; step < target; step += 1) {
+                    if (step === 0 && !reservationValidated) {
+                        openAppModal('Valide sua reserva', 'A etapa de ingressos só é liberada depois de localizar uma reserva válida.', 'warning');
+                        return;
+                    }
+
                     if (step === 1) {
                         readCart();
                         if (ticketCount() < 1) {
@@ -700,6 +890,13 @@
 
     document.getElementById('checkout-form')?.addEventListener('submit', event => {
         readCart();
+
+        if (!reservationValidated) {
+            event.preventDefault();
+            goToStep(0);
+            openAppModal('Reserva obrigatória', 'Antes de concluir a compra, localize e valide sua reserva no <strong>Passo 0</strong>.', 'warning');
+            return;
+        }
 
         if (ticketCount() < 1) {
             event.preventDefault();
@@ -741,6 +938,10 @@
     });
 
     ensureAppUi();
+    if (reservationValidated && reservation) {
+        updateReservationCard(reservation);
+        maxUnlockedStep = Math.max(maxUnlockedStep, 1);
+    }
     readCart();
     updateProgress(currentStep);
 })();
