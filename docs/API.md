@@ -70,7 +70,7 @@ Estados aceitos: `pending`, `imported`, `syncing`, `confirmed`, `failed`.
 
 `POST /api.php?action=sale-ack`
 
-O ACK é recusado enquanto qualquer ticket do pedido não estiver `confirmed` para o mesmo consumidor. Assim, `orders.integration_status=processed` significa que o sistema local reportou confirmação do HikCentral para todos os visitantes.
+O ACK é recusado enquanto qualquer ticket do pedido não estiver `confirmed` para o mesmo consumidor. Assim, `acquavale_vendas_orders.integration_status=processed` significa que o sistema local reportou confirmação do HikCentral para todos os visitantes.
 
 ### 4. Consultar estado
 
