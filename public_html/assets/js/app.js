@@ -2,6 +2,7 @@
     const meta = window.AQV_PRODUCTS || {};
     const cart = {};
     let currentStep = 1;
+    let maxUnlockedStep = 1;
     let visitorsSignature = '';
 
     const brl = value => new Intl.NumberFormat('pt-BR', {
@@ -116,9 +117,16 @@
         const hidden = document.getElementById('cart-json');
         if (hidden) hidden.value = JSON.stringify(cart);
 
+        const signature = cartSignature();
+        if (visitorsSignature && signature !== visitorsSignature && maxUnlockedStep > 1) {
+            maxUnlockedStep = 1;
+            visitorsSignature = '';
+        }
+
         updateStepOneSummary();
         updateMobileCart();
         updateHeaderCart();
+        updateProgress(currentStep);
     }
 
     function ticketCount() {
@@ -199,12 +207,28 @@
     function updateProgress(step) {
         document.querySelectorAll('[data-progress-step]').forEach(item => {
             const number = Number(item.dataset.progressStep);
+            const unlocked = number <= maxUnlockedStep;
+
             item.classList.toggle('is-active', number === step);
-            item.classList.toggle('is-done', number < step);
+            item.classList.toggle('is-done', number < step && unlocked);
+            item.classList.toggle('is-unlocked', unlocked);
+            item.classList.toggle('is-locked', !unlocked);
+
+            if (item.matches('[data-flow-step]')) {
+                item.setAttribute('aria-disabled', unlocked ? 'false' : 'true');
+                item.tabIndex = unlocked ? 0 : -1;
+            }
         });
     }
 
+    function unlockStep(step) {
+        maxUnlockedStep = Math.max(maxUnlockedStep, step);
+        updateProgress(currentStep);
+    }
+
     function goToStep(step) {
+        if (step > maxUnlockedStep) return;
+
         currentStep = step;
         document.querySelectorAll('.wizard-stage[data-step]').forEach(section => {
             section.classList.toggle('is-active', Number(section.dataset.step) === step);
@@ -594,6 +618,7 @@
         }
 
         buildVisitors();
+        unlockStep(2);
         goToStep(2);
     }
 
@@ -622,13 +647,51 @@
     document.getElementById('continue-step-2')?.addEventListener('click', () => {
         if (!validateStep(2)) return;
         syncBuyerContact();
+        unlockStep(3);
         goToStep(3);
     });
 
     document.getElementById('continue-step-3')?.addEventListener('click', () => {
         if (!validateStep(3)) return;
         buildReview();
+        unlockStep(4);
         goToStep(4);
+    });
+
+    document.querySelectorAll('[data-flow-step]').forEach(button => {
+        button.addEventListener('click', () => {
+            const target = Number(button.dataset.flowStep || 0);
+            if (!target || target === currentStep) return;
+
+            if (target > maxUnlockedStep) {
+                openAppModal(
+                    'Etapa ainda não liberada',
+                    'Conclua a etapa atual para liberar <strong>' + escapeHtml(button.querySelector('strong')?.textContent || 'a próxima etapa') + '</strong>.',
+                    'warning'
+                );
+                return;
+            }
+
+            if (target > currentStep) {
+                for (let step = currentStep; step < target; step += 1) {
+                    if (step === 1) {
+                        readCart();
+                        if (ticketCount() < 1) {
+                            openAppModal('Escolha um ingresso', 'Selecione ao menos um ingresso para continuar.', 'warning');
+                            return;
+                        }
+                        buildVisitors();
+                    }
+
+                    if (step === 2 && !validateStep(2)) return;
+                    if (step === 3 && !validateStep(3)) return;
+                }
+
+                if (target === 4) buildReview();
+            }
+
+            goToStep(target);
+        });
     });
 
     document.querySelectorAll('[data-back]').forEach(button => {
@@ -675,6 +738,10 @@
     window.addEventListener('resize', () => {
         updateMobileCart();
         updateHeaderCart();
+    });
+
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(eventName => {
+        document.addEventListener(eventName, event => event.preventDefault(), { passive: false });
     });
 
     ensureAppUi();
