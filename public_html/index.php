@@ -44,11 +44,18 @@ foreach ($products as $product) {
     ];
 }
 
-$currentStep = $order ? ($order['status'] === 'paid' ? 6 : 5) : 1;
+$validatedReservation = (!$order && isset($_SESSION['validated_reservation']) && is_array($_SESSION['validated_reservation']))
+    ? $_SESSION['validated_reservation']
+    : null;
+
+$currentStep = $order
+    ? ($order['status'] === 'paid' ? 6 : 5)
+    : ($validatedReservation ? 1 : 0);
 
 function renderSteps(int $current, bool $interactive = false): void
 {
     $steps = [
+        0 => ['Reserva', 'Validação do hóspede'],
         1 => ['Ingresso', 'Escolha e quantidade'],
         2 => ['Pessoas', 'Cadastro completo'],
         3 => ['Regras', 'Aceites'],
@@ -132,7 +139,7 @@ function renderSteps(int $current, bool $interactive = false): void
     <section class="wizard-stage is-active">
         <div class="container">
             <div class="stage-heading">
-                <span class="stage-kicker">Etapa 5 de 6</span>
+                <span class="stage-kicker">Passo 5</span>
                 <h2>Pagamento</h2>
                 <p>O gateway real será conectado depois. Nesta versão, a aprovação é simulada para testar todo o fluxo.</p>
             </div>
@@ -188,7 +195,7 @@ function renderSteps(int $current, bool $interactive = false): void
     <section class="wizard-stage is-active">
         <div class="container">
             <div class="stage-heading">
-                <span class="stage-kicker">Etapa 6 de 6</span>
+                <span class="stage-kicker">Passo 6</span>
                 <h2>QR Codes e envio</h2>
                 <p>Os QR Codes foram gerados individualmente. A integração de envio automático será ligada ao serviço de e-mail/WhatsApp na próxima etapa do projeto.</p>
             </div>
@@ -252,13 +259,15 @@ function renderSteps(int $current, bool $interactive = false): void
         <div class="container hero-grid">
             <div>
                 <span class="eyebrow">Ingressos oficiais AcquaVale</span>
-                <h1>Compre em <span>6 passos simples.</span></h1>
-                <p>Primeiro você escolhe os ingressos. Depois cadastra individualmente cada pessoa, confere as regras, revisa o pedido, paga e recebe os QR Codes.</p>
+                <h1>Primeiro, <span>localize sua reserva.</span></h1>
+                <p>A compra é exclusiva para hóspedes com reserva no hotel. Validamos sua reserva no Expresso antes de liberar ingressos, cadastros e pagamento.</p>
                 <button class="btn btn-lime" type="button" onclick="document.getElementById('compra').scrollIntoView({behavior:'smooth'})">Começar compra</button>
             </div>
             <div class="hero-card">
-                <strong>Uma pessoa = um cadastro = um ingresso</strong>
+                <strong>Reserva válida primeiro, compra depois</strong>
                 <ul>
+                    <li>Informe o número da sua reserva para consultar o Expresso</li>
+                    <li>Somente reservas encontradas liberam a compra</li>
                     <li>3 ingressos de 2 dias = 3 pessoas cadastradas</li>
                     <li>Cada pessoa terá sua própria foto e documento</li>
                     <li>Cada ingresso terá seu próprio QR Code</li>
@@ -270,15 +279,76 @@ function renderSteps(int $current, bool $interactive = false): void
 
     <section class="wizard-wrap" id="compra">
         <div class="container">
-            <?php renderSteps(1, true); ?>
+            <?php renderSteps($currentStep, true); ?>
 
             <?php if ($error): ?>
                 <div class="notice error wizard-error"><?=e($error)?></div>
             <?php endif; ?>
 
-            <section class="wizard-stage is-active" data-step="1">
+            <section class="wizard-stage <?=$validatedReservation ? '' : 'is-active'?>" data-step="0">
                 <div class="stage-heading">
-                    <span class="stage-kicker">Etapa 1 de 6</span>
+                    <span class="stage-kicker">Passo 0</span>
+                    <h2>Procure sua reserva</h2>
+                    <p>Informe o número da reserva do hotel. A consulta é feita diretamente na API Expresso, usando a mesma integração já utilizada pelo iPlate.</p>
+                </div>
+
+                <div class="reservation-gate card panel">
+                    <div class="reservation-gate-search">
+                        <div class="form-group">
+                            <label for="reservation-code">Número da reserva</label>
+                            <input
+                                id="reservation-code"
+                                type="text"
+                                inputmode="numeric"
+                                autocomplete="off"
+                                placeholder="Ex.: 123456"
+                                value="<?=e((string)($validatedReservation['reservation_code']??''))?>"
+                            >
+                            <small>Use o mesmo número informado na confirmação da hospedagem.</small>
+                        </div>
+                        <button class="btn btn-primary" type="button" id="reservation-search-button">
+                            Procurar reserva
+                        </button>
+                    </div>
+
+                    <div id="reservation-loading" class="reservation-loading" hidden>
+                        <span class="reservation-spinner" aria-hidden="true"></span>
+                        <div><strong>Consultando o Expresso...</strong><small>Aguarde alguns segundos.</small></div>
+                    </div>
+
+                    <div
+                        id="reservation-result"
+                        class="reservation-result <?=$validatedReservation ? 'is-visible' : ''?>"
+                        <?=$validatedReservation ? '' : 'hidden'?>
+                    >
+                        <div class="reservation-result-head">
+                            <div>
+                                <span class="pill">Reserva validada</span>
+                                <h3 id="reservation-result-name"><?=e((string)($validatedReservation['guest_name']??''))?></h3>
+                            </div>
+                            <span class="status active">Encontrada</span>
+                        </div>
+                        <div class="reservation-result-grid">
+                            <div><span>Reserva</span><strong id="reservation-result-code"><?=e((string)($validatedReservation['reservation_code']??''))?></strong></div>
+                            <div><span>Check-in</span><strong id="reservation-result-checkin"><?=e((string)($validatedReservation['checkin_date']??'—'))?></strong></div>
+                            <div><span>UH</span><strong id="reservation-result-uh"><?=e((string)($validatedReservation['uh']??'—'))?></strong></div>
+                            <div><span>Hóspedes</span><strong id="reservation-result-guests"><?php
+                                $a=(string)($validatedReservation['adults']??'');
+                                $ch=(string)($validatedReservation['children']??'');
+                                echo e(trim(($a!=='' ? $a.' adulto(s)' : '').($ch!=='' ? ' · '.$ch.' criança(s)' : '')) ?: '—');
+                            ?></strong></div>
+                        </div>
+                        <div class="reservation-gate-actions">
+                            <button class="btn btn-outline" type="button" id="reservation-change-button">Trocar reserva</button>
+                            <button class="btn btn-lime" type="button" id="continue-step-0">Continuar para ingressos</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="wizard-stage <?=$validatedReservation ? 'is-active' : ''?>" data-step="1">
+                <div class="stage-heading">
+                    <span class="stage-kicker">Passo 1</span>
                     <h2>Escolha os ingressos e a quantidade</h2>
                     <p>Selecione quantos ingressos serão usados. Cada unidade de ingresso representa uma pessoa diferente e exigirá um cadastro completo na próxima etapa.</p>
                 </div>
@@ -325,7 +395,7 @@ function renderSteps(int $current, bool $interactive = false): void
 
                 <section class="wizard-stage" data-step="2">
                     <div class="stage-heading">
-                        <span class="stage-kicker">Etapa 2 de 6</span>
+                        <span class="stage-kicker">Passo 2</span>
                         <h2>Cadastro das pessoas</h2>
                         <p>Preencha um cadastro completo para cada ingresso. Os formulários aparecem um abaixo do outro para evitar confusão.</p>
                     </div>
@@ -344,7 +414,7 @@ function renderSteps(int $current, bool $interactive = false): void
 
                 <section class="wizard-stage" data-step="3">
                     <div class="stage-heading">
-                        <span class="stage-kicker">Etapa 3 de 6</span>
+                        <span class="stage-kicker">Passo 3</span>
                         <h2>Regras de utilização</h2>
                         <p>Antes de fechar o pedido, confirme as condições de uso dos ingressos e da identificação facial.</p>
                     </div>
@@ -387,7 +457,7 @@ function renderSteps(int $current, bool $interactive = false): void
 
                 <section class="wizard-stage" data-step="4">
                     <div class="stage-heading">
-                        <span class="stage-kicker">Etapa 4 de 6</span>
+                        <span class="stage-kicker">Passo 4</span>
                         <h2>Resumo da compra</h2>
                         <p>Confira produtos, pessoas, datas e total antes de criar o pedido.</p>
                     </div>
@@ -423,6 +493,10 @@ function renderSteps(int $current, bool $interactive = false): void
 
     <script>
         window.AQV_PRODUCTS = <?=json_encode($productMeta, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;
+        window.AQV_RESERVATION = <?=json_encode($validatedReservation, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)?>;
+        window.AQV_INITIAL_STEP = <?=json_encode($currentStep)?>;
+        window.AQV_CSRF = <?=json_encode(csrf_token())?>;
+        window.AQV_RESERVATION_ENDPOINT = <?=json_encode(url('reservation.php'))?>;
     </script>
     <script src="assets/js/app.js"></script>
 </main>
