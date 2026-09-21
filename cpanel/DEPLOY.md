@@ -38,6 +38,8 @@ No cPanel:
 
 Não é necessário importar SQL manualmente se você usar o instalador.
 
+Todas as tabelas criadas por este projeto usam o prefixo `acquavale_vendas_` (por exemplo, `acquavale_vendas_products` e `acquavale_vendas_orders`). Isso permite compartilhar o mesmo banco com outras aplicações sem colisão de nomes.
+
 ## 3. DocumentRoot
 
 Aponte o domínio ou subdomínio usado para vendas para:
