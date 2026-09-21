@@ -49,14 +49,14 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
                 (int)($_POST['sort_order']??0)
             ];
             if($id){
-                $s=db()->prepare("UPDATE products SET sku=?,name=?,description=?,product_type=?,price=?,ncm=?,cest=?,duration_days=?,validation_mode=?,requires_visitor=?,active=?,sort_order=?,updated_at=NOW() WHERE id=?");
+                $s=db()->prepare("UPDATE acquavale_vendas_products SET sku=?,name=?,description=?,product_type=?,price=?,ncm=?,cest=?,duration_days=?,validation_mode=?,requires_visitor=?,active=?,sort_order=?,updated_at=NOW() WHERE id=?");
                 $s->execute([...$data,$id]);
             }else{
-                $s=db()->prepare("INSERT INTO products(sku,name,description,product_type,price,ncm,cest,duration_days,validation_mode,requires_visitor,active,sort_order,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,NOW(),NOW())");
+                $s=db()->prepare("INSERT INTO acquavale_vendas_products(sku,name,description,product_type,price,ncm,cest,duration_days,validation_mode,requires_visitor,active,sort_order,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,NOW(),NOW())");
                 $s->execute($data);
                 $id=(int)db()->lastInsertId();
             }
-            db()->prepare("INSERT INTO audit_log(actor,action,entity_type,entity_id,metadata,ip) VALUES(?,?,?,?,?,?)")
+            db()->prepare("INSERT INTO acquavale_vendas_audit_log(actor,action,entity_type,entity_id,metadata,ip) VALUES(?,?,?,?,?,?)")
                 ->execute([$_SESSION['admin']['email'],'product.save','product',(string)$id,json_encode(['sku'=>$data[0]]),client_ip()]);
             redirect(url('admin.php?action=products'));
         }
@@ -65,7 +65,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'){
 
 if($action==='photo'){
     $id=(int)($_GET['id']??0);
-    $s=db()->prepare("SELECT photo_path FROM visitors WHERE id=?");$s->execute([$id]);$r=$s->fetch();
+    $s=db()->prepare("SELECT photo_path FROM acquavale_vendas_visitors WHERE id=?");$s->execute([$id]);$r=$s->fetch();
     if(!$r){http_response_code(404);exit;}
     $file=STORAGE_ROOT.'/private/visitors/'.basename($r['photo_path']);
     if(!is_file($file)){http_response_code(404);exit;}
@@ -75,10 +75,10 @@ if($action==='photo'){
 }
 
 $metrics=[
-    'today'=>(int)db()->query("SELECT COUNT(*) FROM orders WHERE DATE(created_at)=CURDATE()")->fetchColumn(),
-    'paid'=>(int)db()->query("SELECT COUNT(*) FROM orders WHERE status='paid'")->fetchColumn(),
-    'revenue'=>(float)db()->query("SELECT COALESCE(SUM(total),0) FROM orders WHERE status='paid'")->fetchColumn(),
-    'pending'=>(int)db()->query("SELECT COUNT(*) FROM orders WHERE integration_status IN('pending','claimed')")->fetchColumn()
+    'today'=>(int)db()->query("SELECT COUNT(*) FROM acquavale_vendas_orders WHERE DATE(created_at)=CURDATE()")->fetchColumn(),
+    'paid'=>(int)db()->query("SELECT COUNT(*) FROM acquavale_vendas_orders WHERE status='paid'")->fetchColumn(),
+    'revenue'=>(float)db()->query("SELECT COALESCE(SUM(total),0) FROM acquavale_vendas_orders WHERE status='paid'")->fetchColumn(),
+    'pending'=>(int)db()->query("SELECT COUNT(*) FROM acquavale_vendas_orders WHERE integration_status IN('pending','claimed')")->fetchColumn()
 ];
 
 function adminHead(string $title):void{ ?>
@@ -93,8 +93,8 @@ if($error)echo '<div class="notice error">'.e($error).'</div>';
 
 if($action==='products'){
     $edit=null;
-    if(isset($_GET['edit'])){$s=db()->prepare("SELECT * FROM products WHERE id=?");$s->execute([(int)$_GET['edit']]);$edit=$s->fetch();}
-    $rows=db()->query("SELECT * FROM products ORDER BY sort_order,id")->fetchAll();
+    if(isset($_GET['edit'])){$s=db()->prepare("SELECT * FROM acquavale_vendas_products WHERE id=?");$s->execute([(int)$_GET['edit']]);$edit=$s->fetch();}
+    $rows=db()->query("SELECT * FROM acquavale_vendas_products ORDER BY sort_order,id")->fetchAll();
     ?>
     <div class="section-title"><div><span class="pill">Catálogo</span><h2>Produtos</h2></div><a class="btn btn-primary" href="admin.php?action=products&new=1">Novo produto</a></div>
     <?php if($edit||isset($_GET['new'])):
@@ -127,14 +127,14 @@ if($action==='products'){
 if($action==='orders'){
     if(isset($_GET['id'])){
         $id=(int)$_GET['id'];
-        $s=db()->prepare("SELECT * FROM orders WHERE id=?");$s->execute([$id]);$o=$s->fetch();
+        $s=db()->prepare("SELECT * FROM acquavale_vendas_orders WHERE id=?");$s->execute([$id]);$o=$s->fetch();
         if(!$o){echo '<div class="notice error">Pedido não encontrado.</div>';adminFoot();exit;}
         $s=db()->prepare("SELECT t.*,v.first_name,v.last_name,v.email,v.phone,v.document_type,v.document_number,v.sex,v.id visitor_id,p.name product_name,
             COALESCE(ti.state,'pending') integration_state,ti.external_reservation_id,ti.hcp_visitor_id,ti.hcp_reference,ti.message integration_message,ti.last_attempt_at,ti.confirmed_at
-            FROM tickets t
-            JOIN visitors v ON v.id=t.visitor_id
-            JOIN products p ON p.id=t.product_id
-            LEFT JOIN ticket_integrations ti ON ti.ticket_id=t.id AND ti.consumer='vale-visitor'
+            FROM acquavale_vendas_tickets t
+            JOIN acquavale_vendas_visitors v ON v.id=t.visitor_id
+            JOIN acquavale_vendas_products p ON p.id=t.product_id
+            LEFT JOIN acquavale_vendas_ticket_integrations ti ON ti.ticket_id=t.id AND ti.consumer='vale-visitor'
             WHERE t.order_id=?");
         $s->execute([$id]);$tickets=$s->fetchAll();
         ?>
@@ -169,7 +169,7 @@ if($action==='orders'){
         <?php adminFoot();exit;
     }
 
-    $rows=db()->query("SELECT * FROM orders ORDER BY id DESC LIMIT 300")->fetchAll();
+    $rows=db()->query("SELECT * FROM acquavale_vendas_orders ORDER BY id DESC LIMIT 300")->fetchAll();
     ?>
     <div class="section-title"><div><span class="pill">Operação</span><h2>Pedidos</h2></div><p>Últimos 300 pedidos.</p></div>
     <div class="card panel table-wrap"><table><thead><tr><th>Pedido</th><th>Data</th><th>Comprador</th><th>Total</th><th>Status</th><th>Integração</th></tr></thead><tbody>
