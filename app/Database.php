@@ -60,7 +60,10 @@ final class Database {
         });
 
         self::migrate($pdo, '20260921_claim_consumer', function(PDO $pdo): void {
-            $pdo->exec("ALTER TABLE orders ADD COLUMN integration_claim_consumer VARCHAR(100) NULL AFTER integration_claim_token");
+            $column=$pdo->query("SHOW COLUMNS FROM orders LIKE 'integration_claim_consumer'")->fetch();
+            if (!$column) {
+                $pdo->exec("ALTER TABLE orders ADD COLUMN integration_claim_consumer VARCHAR(100) NULL AFTER integration_claim_token");
+            }
         });
 
         self::migrate($pdo, '20260921_ticket_integrations', function(PDO $pdo): void {
