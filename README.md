@@ -23,13 +23,15 @@ O DocumentRoot do domínio/subdomínio deve apontar para `public_html/`.
 - loja responsiva no visual AcquaVale;
 - produtos com nome, SKU, preço, NCM, CEST, tipo, duração e regra de validação;
 - ingresso de 1 dia, 2 dias e locker como exemplos iniciais;
-- carrinho e resumo antes do pagamento;
+- fluxo de compra em 6 etapas: escolha/quantidade, cadastro individual das pessoas, regras, resumo, pagamento e QR Codes;
+- cada unidade de ingresso exige um cadastro completo próprio; por exemplo, 3 ingressos de 2 dias geram 3 pessoas e 3 QR Codes;
 - nome, sobrenome, e-mail, telefone, data de entrada, CPF/RG/CNH, sexo e foto por visitante;
 - foto pela câmera ou galeria;
 - armazenamento da foto fora do DocumentRoot;
 - consentimento para uso da foto no controle de acesso;
 - pedido, itens, visitantes e ingressos persistidos em MySQL;
-- pagamento simulado;
+- pagamento simulado em etapa própria;
+- QR Code individual gerado após a aprovação do pagamento, com ponto preparado para futuro envio por e-mail/WhatsApp;
 - painel administrativo;
 - API autenticada para catracas/face scanner;
 - validação transacional e idempotente;
