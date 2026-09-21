@@ -129,14 +129,36 @@ if($action==='orders'){
         $id=(int)$_GET['id'];
         $s=db()->prepare("SELECT * FROM orders WHERE id=?");$s->execute([$id]);$o=$s->fetch();
         if(!$o){echo '<div class="notice error">Pedido não encontrado.</div>';adminFoot();exit;}
-        $s=db()->prepare("SELECT t.*,v.first_name,v.last_name,v.email,v.phone,v.document_type,v.document_number,v.sex,v.id visitor_id,p.name product_name FROM tickets t JOIN visitors v ON v.id=t.visitor_id JOIN products p ON p.id=t.product_id WHERE t.order_id=?");
+        $s=db()->prepare("SELECT t.*,v.first_name,v.last_name,v.email,v.phone,v.document_type,v.document_number,v.sex,v.id visitor_id,p.name product_name,
+            COALESCE(ti.state,'pending') integration_state,ti.external_reservation_id,ti.hcp_visitor_id,ti.hcp_reference,ti.message integration_message,ti.last_attempt_at,ti.confirmed_at
+            FROM tickets t
+            JOIN visitors v ON v.id=t.visitor_id
+            JOIN products p ON p.id=t.product_id
+            LEFT JOIN ticket_integrations ti ON ti.ticket_id=t.id AND ti.consumer='vale-visitor'
+            WHERE t.order_id=?");
         $s->execute([$id]);$tickets=$s->fetchAll();
         ?>
         <div class="section-title"><div><span class="pill">Pedido</span><h2><?=e($o['order_code'])?></h2></div><a href="admin.php?action=orders">Voltar</a></div>
         <div class="card panel"><p><strong>Status:</strong> <span class="status <?=e($o['status'])?>"><?=e($o['status'])?></span> · <strong>Integração:</strong> <span class="status <?=e($o['integration_status'])?>"><?=e($o['integration_status'])?></span></p><p><strong>Comprador:</strong> <?=e($o['buyer_email'])?> · <?=e($o['buyer_phone'])?></p><p><strong>Total:</strong> <?=money($o['total'])?></p></div>
         <h3 style="color:var(--navy)">Visitantes / ingressos</h3>
-        <div class="card panel table-wrap"><table><thead><tr><th>Foto</th><th>Visitante</th><th>Documento</th><th>Ingresso</th><th>Validade</th><th>Código</th></tr></thead><tbody>
-        <?php foreach($tickets as $t): ?><tr><td><img src="admin.php?action=photo&id=<?=(int)$t['visitor_id']?>" style="width:64px;height:64px;object-fit:cover;border-radius:14px"></td><td><strong><?=e($t['first_name'].' '.$t['last_name'])?></strong><br><small><?=e($t['email'])?> · <?=e($t['phone'])?></small></td><td><?=e($t['document_type'].' '.$t['document_number'])?></td><td><?=e($t['product_name'])?></td><td><?=e(date('d/m/Y',strtotime($t['valid_from'])))?> → <?=e(date('d/m/Y',strtotime($t['valid_to'])))?></td><td class="ticket-code"><?=e($t['ticket_code'])?></td></tr><?php endforeach; ?>
+        <div class="card panel table-wrap"><table><thead><tr><th>Foto</th><th>Visitante</th><th>Documento</th><th>Ingresso</th><th>Validade</th><th>Código</th><th>HikCentral</th></tr></thead><tbody>
+        <?php foreach($tickets as $t): ?>
+        <tr>
+            <td><img src="admin.php?action=photo&id=<?=(int)$t['visitor_id']?>" style="width:64px;height:64px;object-fit:cover;border-radius:14px"></td>
+            <td><strong><?=e($t['first_name'].' '.$t['last_name'])?></strong><br><small><?=e($t['email'])?> · <?=e($t['phone'])?></small></td>
+            <td><?=e($t['document_type'].' '.$t['document_number'])?></td>
+            <td><?=e($t['product_name'])?></td>
+            <td><?=e(date('d/m/Y',strtotime($t['valid_from'])))?> → <?=e(date('d/m/Y',strtotime($t['valid_to'])))?></td>
+            <td class="ticket-code"><?=e($t['ticket_code'])?></td>
+            <td>
+                <span class="status <?=e($t['integration_state']==='confirmed'?'processed':($t['integration_state']==='failed'?'error':'pending'))?>"><?=e($t['integration_state'])?></span>
+                <?php if($t['external_reservation_id']): ?><br><small>Reserva local #<?=e($t['external_reservation_id'])?></small><?php endif; ?>
+                <?php if($t['hcp_visitor_id']): ?><br><small>Visitor ID: <?=e($t['hcp_visitor_id'])?></small><?php endif; ?>
+                <?php if($t['confirmed_at']): ?><br><small>Confirmado: <?=e(date('d/m/Y H:i:s',strtotime($t['confirmed_at'])))?></small><?php endif; ?>
+                <?php if($t['integration_message']): ?><br><small><?=e($t['integration_message'])?></small><?php endif; ?>
+            </td>
+        </tr>
+        <?php endforeach; ?>
         </tbody></table></div>
         <?php adminFoot();exit;
     }
