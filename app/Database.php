@@ -66,6 +66,32 @@ final class Database {
             }
         });
 
+        self::migrate($pdo, '20260921_order_reservation_gate', function(PDO $pdo): void {
+            $columns=[
+                'expresso_reservation_id' => "ALTER TABLE orders ADD COLUMN expresso_reservation_id VARCHAR(190) NULL AFTER buyer_phone",
+                'expresso_reservation_code' => "ALTER TABLE orders ADD COLUMN expresso_reservation_code VARCHAR(100) NULL AFTER expresso_reservation_id",
+                'expresso_guest_name' => "ALTER TABLE orders ADD COLUMN expresso_guest_name VARCHAR(190) NULL AFTER expresso_reservation_code",
+                'expresso_guest_cpf' => "ALTER TABLE orders ADD COLUMN expresso_guest_cpf VARCHAR(40) NULL AFTER expresso_guest_name",
+                'expresso_checkin_date' => "ALTER TABLE orders ADD COLUMN expresso_checkin_date VARCHAR(40) NULL AFTER expresso_guest_cpf",
+                'expresso_checkout_date' => "ALTER TABLE orders ADD COLUMN expresso_checkout_date VARCHAR(40) NULL AFTER expresso_checkin_date",
+                'expresso_adults' => "ALTER TABLE orders ADD COLUMN expresso_adults VARCHAR(20) NULL AFTER expresso_checkout_date",
+                'expresso_children' => "ALTER TABLE orders ADD COLUMN expresso_children VARCHAR(20) NULL AFTER expresso_adults",
+                'expresso_uh' => "ALTER TABLE orders ADD COLUMN expresso_uh VARCHAR(80) NULL AFTER expresso_children",
+                'expresso_reservation_snapshot' => "ALTER TABLE orders ADD COLUMN expresso_reservation_snapshot JSON NULL AFTER expresso_uh",
+                'reservation_verified_at' => "ALTER TABLE orders ADD COLUMN reservation_verified_at DATETIME NULL AFTER expresso_reservation_snapshot",
+            ];
+
+            foreach ($columns as $column=>$sql) {
+                $check=$pdo->query("SHOW COLUMNS FROM orders LIKE ".$pdo->quote($column))->fetch();
+                if (!$check) $pdo->exec($sql);
+            }
+
+            $index=$pdo->query("SHOW INDEX FROM orders WHERE Key_name='idx_orders_expresso_reservation'")->fetch();
+            if (!$index) {
+                $pdo->exec("CREATE INDEX idx_orders_expresso_reservation ON orders(expresso_reservation_code)");
+            }
+        });
+
         self::migrate($pdo, '20260921_ticket_integrations', function(PDO $pdo): void {
             $pdo->exec(
                 "CREATE TABLE IF NOT EXISTS ticket_integrations (
