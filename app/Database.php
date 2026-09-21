@@ -161,7 +161,7 @@ final class Database {
                     confirmed_at DATETIME NULL,
                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    CONSTRAINT fk_ticket_integrations_ticket FOREIGN KEY(ticket_id) REFERENCES acquavale_vendas_tickets(id) ON DELETE CASCADE,
+                    CONSTRAINT fk_acquavale_vendas_ticket_integrations_ticket FOREIGN KEY(ticket_id) REFERENCES acquavale_vendas_tickets(id) ON DELETE CASCADE,
                     UNIQUE KEY uq_ticket_consumer(ticket_id,consumer),
                     INDEX idx_ticket_integrations_state(state,updated_at)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
