@@ -60,8 +60,8 @@ CREATE TABLE IF NOT EXISTS acquavale_vendas_order_items (
  ncm VARCHAR(10) NULL,
  cest VARCHAR(10) NULL,
  created_at DATETIME NOT NULL,
- CONSTRAINT fk_order_items_order FOREIGN KEY(order_id) REFERENCES acquavale_vendas_orders(id),
- CONSTRAINT fk_order_items_product FOREIGN KEY(product_id) REFERENCES acquavale_vendas_products(id)
+ CONSTRAINT fk_acquavale_vendas_order_items_order FOREIGN KEY(order_id) REFERENCES acquavale_vendas_orders(id),
+ CONSTRAINT fk_acquavale_vendas_order_items_product FOREIGN KEY(product_id) REFERENCES acquavale_vendas_products(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS acquavale_vendas_visitors (
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS acquavale_vendas_visitors (
  photo_path VARCHAR(255) NOT NULL,
  biometric_consent_at DATETIME NOT NULL,
  created_at DATETIME NOT NULL,
- CONSTRAINT fk_visitors_order FOREIGN KEY(order_id) REFERENCES acquavale_vendas_orders(id),
+ CONSTRAINT fk_acquavale_vendas_visitors_order FOREIGN KEY(order_id) REFERENCES acquavale_vendas_orders(id),
  INDEX idx_visitors_document(document_type,document_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -92,9 +92,9 @@ CREATE TABLE IF NOT EXISTS acquavale_vendas_tickets (
  validation_mode ENUM('once_total','once_per_day','unlimited_validity') NOT NULL,
  status ENUM('pending','active','blocked','cancelled','used') NOT NULL DEFAULT 'pending',
  created_at DATETIME NOT NULL,
- CONSTRAINT fk_tickets_order FOREIGN KEY(order_id) REFERENCES acquavale_vendas_orders(id),
- CONSTRAINT fk_tickets_product FOREIGN KEY(product_id) REFERENCES acquavale_vendas_products(id),
- CONSTRAINT fk_tickets_visitor FOREIGN KEY(visitor_id) REFERENCES acquavale_vendas_visitors(id),
+ CONSTRAINT fk_acquavale_vendas_tickets_order FOREIGN KEY(order_id) REFERENCES acquavale_vendas_orders(id),
+ CONSTRAINT fk_acquavale_vendas_tickets_product FOREIGN KEY(product_id) REFERENCES acquavale_vendas_products(id),
+ CONSTRAINT fk_acquavale_vendas_tickets_visitor FOREIGN KEY(visitor_id) REFERENCES acquavale_vendas_visitors(id),
  INDEX idx_tickets_validity(status,valid_from,valid_to)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -106,7 +106,7 @@ CREATE TABLE IF NOT EXISTS acquavale_vendas_ticket_redemptions (
  idempotency_key VARCHAR(100) NULL,
  validated_at DATETIME NOT NULL,
  source_ip VARCHAR(64) NULL,
- CONSTRAINT fk_redemptions_ticket FOREIGN KEY(ticket_id) REFERENCES acquavale_vendas_tickets(id),
+ CONSTRAINT fk_acquavale_vendas_redemptions_ticket FOREIGN KEY(ticket_id) REFERENCES acquavale_vendas_tickets(id),
  UNIQUE KEY uq_ticket_day(ticket_id,visit_date),
  UNIQUE KEY uq_redemption_idempotency(idempotency_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS acquavale_vendas_integration_receipts (
  consumer VARCHAR(100) NOT NULL,
  external_reference VARCHAR(190) NULL,
  processed_at DATETIME NOT NULL,
- CONSTRAINT fk_integration_receipts_order FOREIGN KEY(order_id) REFERENCES acquavale_vendas_orders(id),
+ CONSTRAINT fk_acquavale_vendas_integration_receipts_order FOREIGN KEY(order_id) REFERENCES acquavale_vendas_orders(id),
  UNIQUE KEY uq_order_consumer(order_id,consumer)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS acquavale_vendas_ticket_integrations (
  confirmed_at DATETIME NULL,
  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
- CONSTRAINT fk_ticket_integrations_ticket FOREIGN KEY(ticket_id) REFERENCES acquavale_vendas_tickets(id) ON DELETE CASCADE,
+ CONSTRAINT fk_acquavale_vendas_ticket_integrations_ticket FOREIGN KEY(ticket_id) REFERENCES acquavale_vendas_tickets(id) ON DELETE CASCADE,
  UNIQUE KEY uq_ticket_consumer(ticket_id,consumer),
  INDEX idx_ticket_integrations_state(state,updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
