@@ -8,6 +8,7 @@ use RuntimeException;
 
 final class Database {
     private static ?PDO $pdo=null;
+    private const PREFIX='acquavale_vendas_';
 
     public static function connection(): PDO {
         if (self::$pdo) return self::$pdo;
@@ -34,14 +35,66 @@ final class Database {
         );
 
         self::$pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
+        self::migrateLegacyTableNames(self::$pdo);
         self::runMigrations(self::$pdo);
 
         return self::$pdo;
     }
 
+    private static function migrateLegacyTableNames(PDO $pdo): void {
+        $map=[
+            'products'=>self::PREFIX.'products',
+            'orders'=>self::PREFIX.'orders',
+            'order_items'=>self::PREFIX.'order_items',
+            'visitors'=>self::PREFIX.'visitors',
+            'tickets'=>self::PREFIX.'tickets',
+            'ticket_redemptions'=>self::PREFIX.'ticket_redemptions',
+            'integration_receipts'=>self::PREFIX.'integration_receipts',
+            'audit_log'=>self::PREFIX.'audit_log',
+            'ticket_integrations'=>self::PREFIX.'ticket_integrations',
+            'app_migrations'=>self::PREFIX.'app_migrations',
+        ];
+
+        $database=(string)$pdo->query("SELECT DATABASE()")->fetchColumn();
+        if ($database==='') return;
+
+        $exists=$pdo->prepare(
+            "SELECT 1
+             FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA=? AND TABLE_NAME=?
+             LIMIT 1"
+        );
+
+        $renames=[];
+        foreach ($map as $legacy=>$prefixed) {
+            $exists->execute([$database,$legacy]);
+            $legacyExists=(bool)$exists->fetchColumn();
+
+            $exists->execute([$database,$prefixed]);
+            $prefixedExists=(bool)$exists->fetchColumn();
+
+            if ($legacyExists && $prefixedExists) {
+                throw new RuntimeException(
+                    "Conflito de tabelas: existem '{$legacy}' e '{$prefixed}'. " .
+                    "A migração automática foi interrompida para evitar perda de dados."
+                );
+            }
+
+            if ($legacyExists) {
+                $renames[]="{$legacy} TO {$prefixed}";
+            }
+        }
+
+        if ($renames) {
+            $pdo->exec("RENAME TABLE ".implode(', ',$renames));
+        }
+    }
+
     private static function runMigrations(PDO $pdo): void {
+        $migrations=self::PREFIX.'app_migrations';
+
         $pdo->exec(
-            "CREATE TABLE IF NOT EXISTS app_migrations (
+            "CREATE TABLE IF NOT EXISTS {$migrations} (
                 migration VARCHAR(190) NOT NULL PRIMARY KEY,
                 applied_at DATETIME NOT NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
@@ -49,7 +102,7 @@ final class Database {
 
         self::migrate($pdo, '20260921_fix_locker_utf8', function(PDO $pdo): void {
             $update=$pdo->prepare(
-                "UPDATE products
+                "UPDATE acquavale_vendas_products
                  SET name=?, description=?
                  WHERE sku='LOCKER-DIA'"
             );
@@ -60,41 +113,41 @@ final class Database {
         });
 
         self::migrate($pdo, '20260921_claim_consumer', function(PDO $pdo): void {
-            $column=$pdo->query("SHOW COLUMNS FROM orders LIKE 'integration_claim_consumer'")->fetch();
+            $column=$pdo->query("SHOW COLUMNS FROM acquavale_vendas_orders LIKE 'integration_claim_consumer'")->fetch();
             if (!$column) {
-                $pdo->exec("ALTER TABLE orders ADD COLUMN integration_claim_consumer VARCHAR(100) NULL AFTER integration_claim_token");
+                $pdo->exec("ALTER TABLE acquavale_vendas_orders ADD COLUMN integration_claim_consumer VARCHAR(100) NULL AFTER integration_claim_token");
             }
         });
 
         self::migrate($pdo, '20260921_order_reservation_gate', function(PDO $pdo): void {
             $columns=[
-                'expresso_reservation_id' => "ALTER TABLE orders ADD COLUMN expresso_reservation_id VARCHAR(190) NULL AFTER buyer_phone",
-                'expresso_reservation_code' => "ALTER TABLE orders ADD COLUMN expresso_reservation_code VARCHAR(100) NULL AFTER expresso_reservation_id",
-                'expresso_guest_name' => "ALTER TABLE orders ADD COLUMN expresso_guest_name VARCHAR(190) NULL AFTER expresso_reservation_code",
-                'expresso_guest_cpf' => "ALTER TABLE orders ADD COLUMN expresso_guest_cpf VARCHAR(40) NULL AFTER expresso_guest_name",
-                'expresso_checkin_date' => "ALTER TABLE orders ADD COLUMN expresso_checkin_date VARCHAR(40) NULL AFTER expresso_guest_cpf",
-                'expresso_checkout_date' => "ALTER TABLE orders ADD COLUMN expresso_checkout_date VARCHAR(40) NULL AFTER expresso_checkin_date",
-                'expresso_adults' => "ALTER TABLE orders ADD COLUMN expresso_adults VARCHAR(20) NULL AFTER expresso_checkout_date",
-                'expresso_children' => "ALTER TABLE orders ADD COLUMN expresso_children VARCHAR(20) NULL AFTER expresso_adults",
-                'expresso_uh' => "ALTER TABLE orders ADD COLUMN expresso_uh VARCHAR(80) NULL AFTER expresso_children",
-                'expresso_reservation_snapshot' => "ALTER TABLE orders ADD COLUMN expresso_reservation_snapshot JSON NULL AFTER expresso_uh",
-                'reservation_verified_at' => "ALTER TABLE orders ADD COLUMN reservation_verified_at DATETIME NULL AFTER expresso_reservation_snapshot",
+                'expresso_reservation_id' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN expresso_reservation_id VARCHAR(190) NULL AFTER buyer_phone",
+                'expresso_reservation_code' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN expresso_reservation_code VARCHAR(100) NULL AFTER expresso_reservation_id",
+                'expresso_guest_name' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN expresso_guest_name VARCHAR(190) NULL AFTER expresso_reservation_code",
+                'expresso_guest_cpf' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN expresso_guest_cpf VARCHAR(40) NULL AFTER expresso_guest_name",
+                'expresso_checkin_date' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN expresso_checkin_date VARCHAR(40) NULL AFTER expresso_guest_cpf",
+                'expresso_checkout_date' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN expresso_checkout_date VARCHAR(40) NULL AFTER expresso_checkin_date",
+                'expresso_adults' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN expresso_adults VARCHAR(20) NULL AFTER expresso_checkout_date",
+                'expresso_children' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN expresso_children VARCHAR(20) NULL AFTER expresso_adults",
+                'expresso_uh' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN expresso_uh VARCHAR(80) NULL AFTER expresso_children",
+                'expresso_reservation_snapshot' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN expresso_reservation_snapshot JSON NULL AFTER expresso_uh",
+                'reservation_verified_at' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN reservation_verified_at DATETIME NULL AFTER expresso_reservation_snapshot",
             ];
 
             foreach ($columns as $column=>$sql) {
-                $check=$pdo->query("SHOW COLUMNS FROM orders LIKE ".$pdo->quote($column))->fetch();
+                $check=$pdo->query("SHOW COLUMNS FROM acquavale_vendas_orders LIKE ".$pdo->quote($column))->fetch();
                 if (!$check) $pdo->exec($sql);
             }
 
-            $index=$pdo->query("SHOW INDEX FROM orders WHERE Key_name='idx_orders_expresso_reservation'")->fetch();
+            $index=$pdo->query("SHOW INDEX FROM acquavale_vendas_orders WHERE Key_name='idx_orders_expresso_reservation'")->fetch();
             if (!$index) {
-                $pdo->exec("CREATE INDEX idx_orders_expresso_reservation ON orders(expresso_reservation_code)");
+                $pdo->exec("CREATE INDEX idx_orders_expresso_reservation ON acquavale_vendas_orders(expresso_reservation_code)");
             }
         });
 
         self::migrate($pdo, '20260921_ticket_integrations', function(PDO $pdo): void {
             $pdo->exec(
-                "CREATE TABLE IF NOT EXISTS ticket_integrations (
+                "CREATE TABLE IF NOT EXISTS acquavale_vendas_ticket_integrations (
                     id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                     ticket_id BIGINT UNSIGNED NOT NULL,
                     consumer VARCHAR(100) NOT NULL,
@@ -108,7 +161,7 @@ final class Database {
                     confirmed_at DATETIME NULL,
                     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-                    CONSTRAINT fk_ticket_integrations_ticket FOREIGN KEY(ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+                    CONSTRAINT fk_ticket_integrations_ticket FOREIGN KEY(ticket_id) REFERENCES acquavale_vendas_tickets(id) ON DELETE CASCADE,
                     UNIQUE KEY uq_ticket_consumer(ticket_id,consumer),
                     INDEX idx_ticket_integrations_state(state,updated_at)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
@@ -117,14 +170,16 @@ final class Database {
     }
 
     private static function migrate(PDO $pdo,string $migration,callable $callback): void {
-        $check=$pdo->prepare("SELECT 1 FROM app_migrations WHERE migration=? LIMIT 1");
+        $migrations=self::PREFIX.'app_migrations';
+
+        $check=$pdo->prepare("SELECT 1 FROM {$migrations} WHERE migration=? LIMIT 1");
         $check->execute([$migration]);
         if ($check->fetchColumn()) return;
 
         $pdo->beginTransaction();
         try {
             $callback($pdo);
-            $save=$pdo->prepare("INSERT INTO app_migrations(migration,applied_at) VALUES(?,NOW())");
+            $save=$pdo->prepare("INSERT INTO {$migrations}(migration,applied_at) VALUES(?,NOW())");
             $save->execute([$migration]);
             $pdo->commit();
         } catch (\Throwable $e) {
