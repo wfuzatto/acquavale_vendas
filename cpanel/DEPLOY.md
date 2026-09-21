@@ -87,3 +87,31 @@ A API key fica em `config/config.local.php`.
 ## Atualização via Git
 
 O arquivo `config/config.local.php`, o lock de instalação e as fotos não entram no Git. Assim é possível atualizar o código sem sobrescrever senha do banco, credenciais da API ou imagens dos visitantes.
+
+
+## 7. Integração Expresso / validação de reserva
+
+A compra começa no **Passo 0 - Reserva**. O servidor consulta diretamente:
+
+- `https://vale.expresso.app/api/obter_token`
+- `https://vale.expresso.app/api/reserva`
+
+Use as mesmas credenciais de API Expresso já utilizadas no iPlate.
+
+Em instalações novas, o instalador possui os campos **Usuário API Expresso** e **Senha API Expresso**.
+
+Em uma instalação já existente, acrescente ao array de `config/config.local.php`:
+
+```php
+'expresso' => [
+    'token_url' => 'https://vale.expresso.app/api/obter_token',
+    'reservation_url' => 'https://vale.expresso.app/api/reserva',
+    'user' => 'SEU_USUARIO_EXPRESSO',
+    'password' => 'SUA_SENHA_EXPRESSO',
+    'timeout_seconds' => 20,
+],
+```
+
+As credenciais ficam somente no servidor e nunca são enviadas ao navegador.
+
+O checkout faz um **segundo lookup server-side** no Expresso antes de criar o pedido. Portanto não é possível pular o Passo 0 apenas manipulando JavaScript.
