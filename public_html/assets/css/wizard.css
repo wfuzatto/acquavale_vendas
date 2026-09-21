@@ -155,6 +155,5 @@ input.is-invalid,select.is-invalid,textarea.is-invalid{border-color:#e9786e!impo
 
 
 @media(max-width:680px){
-  html,body{touch-action:pan-x pan-y}
   .wizard-progress-item[data-flow-step].is-unlocked:hover{transform:none}
 }
