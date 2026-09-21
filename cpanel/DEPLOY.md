@@ -91,29 +91,40 @@ A API key fica em `config/config.local.php`.
 O arquivo `config/config.local.php`, o lock de instalação e as fotos não entram no Git. Assim é possível atualizar o código sem sobrescrever senha do banco, credenciais da API ou imagens dos visitantes.
 
 
-## 7. Integração Expresso / validação de reserva
+## 7. Validação de reserva via backend iPlate
 
-A compra começa no **Passo 0 - Reserva**. O servidor consulta diretamente:
+A compra começa no **Passo 0 - Reserva**.
 
-- `https://vale.expresso.app/api/obter_token`
-- `https://vale.expresso.app/api/reserva`
+O AcquaVale Vendas replica o fluxo completo já usado pelo app iPlate:
 
-Use as mesmas credenciais de API Expresso já utilizadas no iPlate.
+1. faz login server-side em `login.php`;
+2. recebe o `api_token` do usuário iPlate;
+3. consulta `reservation-search.php` com esse token e o número exato da reserva;
+4. somente reservas com status **confirmada** ou **checkin** liberam a compra;
+5. antes de criar o pedido, a reserva é consultada novamente no servidor.
 
-Em instalações novas, o instalador possui os campos **Usuário API Expresso** e **Senha API Expresso**.
+URL padrão do backend:
 
-Em uma instalação já existente, acrescente ao array de `config/config.local.php`:
+`https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php`
+
+O sistema deriva automaticamente os endpoints `login.php` e `reservation-search.php`.
+
+Em instalações novas, informe no instalador:
+- URL do backend iPlate;
+- usuário do backend iPlate;
+- senha do backend iPlate.
+
+Em uma instalação já existente, acrescente ao `config/config.local.php`:
 
 ```php
-'expresso' => [
-    'token_url' => 'https://vale.expresso.app/api/obter_token',
-    'reservation_url' => 'https://vale.expresso.app/api/reserva',
-    'user' => 'SEU_USUARIO_EXPRESSO',
-    'password' => 'SUA_SENHA_EXPRESSO',
+'iplate' => [
+    'server_url' => 'https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php',
+    'username' => 'SEU_USUARIO_IPLATE',
+    'password' => 'SUA_SENHA_IPLATE',
     'timeout_seconds' => 20,
 ],
 ```
 
-As credenciais ficam somente no servidor e nunca são enviadas ao navegador.
+A senha e o token nunca são enviados ao navegador. O `api_token` é obtido no servidor e armazenado apenas na sessão por até 30 minutos. Se o backend responder 401, o token é descartado, um novo login é feito e a consulta é tentada novamente.
 
-O checkout faz um **segundo lookup server-side** no Expresso antes de criar o pedido. Portanto não é possível pular o Passo 0 apenas manipulando JavaScript.
+O fluxo antigo de autenticação direta em `/api/obter_token` não é mais necessário para validar a compra.
