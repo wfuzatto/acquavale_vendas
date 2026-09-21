@@ -38,7 +38,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
         $csrf=(string)($_POST['_csrf']??'');
         if(!hash_equals($_SESSION['install_csrf'],$csrf)) throw new RuntimeException('Sessão expirada. Atualize a página.');
 
-        foreach(['pdo_mysql','fileinfo','json'] as $ext){
+        foreach(['pdo_mysql','fileinfo','json','curl'] as $ext){
             if(!extension_loaded($ext)) throw new RuntimeException("A extensão PHP {$ext} não está habilitada.");
         }
 
@@ -51,6 +51,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
         $adminPassword=(string)($_POST['admin_password']??'');
         $basePath=trim((string)($_POST['base_path']??$detectedBase));
         $appUrl=rtrim(trim((string)($_POST['app_url']??$detectedUrl)),'/');
+        $expressoUser=trim((string)($_POST['expresso_user']??''));
+        $expressoPassword=(string)($_POST['expresso_password']??'');
 
         if($dbName===''||$dbUser==='') throw new RuntimeException('Informe o banco e o usuário MySQL criados no cPanel.');
         if(!filter_var($adminEmail,FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Informe um e-mail administrativo válido.');
@@ -97,6 +99,13 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
             'uploads'=>[
                 'max_photo_mb'=>8,
             ],
+            'expresso'=>[
+                'token_url'=>'https://vale.expresso.app/api/obter_token',
+                'reservation_url'=>'https://vale.expresso.app/api/reserva',
+                'user'=>$expressoUser,
+                'password'=>$expressoPassword,
+                'timeout_seconds'=>20,
+            ],
         ];
 
         $php="<?php\nreturn ".var_export($config,true).";\n";
@@ -117,6 +126,7 @@ $checks=[
     'PDO MySQL'=>extension_loaded('pdo_mysql'),
     'Fileinfo'=>extension_loaded('fileinfo'),
     'JSON'=>extension_loaded('json'),
+    'cURL'=>extension_loaded('curl'),
     'Config gravável'=>is_writable($root.'/config'),
     'Storage gravável ou criável'=>is_writable($root.'/storage')||is_writable($root),
 ];
@@ -144,6 +154,9 @@ $checks=[
 <div class="form-group"><label>Senha administrador</label><input type="password" name="admin_password" minlength="10" required autocomplete="new-password"></div>
 <div class="form-group"><label>URL do sistema</label><input name="app_url" value="<?=htmlspecialchars((string)($_POST['app_url']??$detectedUrl))?>" required></div>
 <div class="form-group"><label>Caminho base</label><input name="base_path" value="<?=htmlspecialchars((string)($_POST['base_path']??$detectedBase))?>" placeholder="/ingressos"><small>Deixe vazio quando o domínio/subdomínio apontar diretamente para public_html.</small></div>
+<div class="form-group full" style="margin-top:10px"><div class="notice"><strong>Integração Expresso:</strong> use as mesmas credenciais já configuradas no iPlate. Elas ficam somente no <code>config.local.php</code>.</div></div>
+<div class="form-group"><label>Usuário API Expresso</label><input name="expresso_user" value="<?=htmlspecialchars((string)($_POST['expresso_user']??''))?>" autocomplete="off"></div>
+<div class="form-group"><label>Senha API Expresso</label><input type="password" name="expresso_password" autocomplete="new-password"></div>
 </div><button class="btn btn-primary" style="margin-top:20px">Instalar sistema</button></form></div>
 <?php endif;?>
 </div></body></html>
