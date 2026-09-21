@@ -94,7 +94,7 @@ function renderSteps(int $current, bool $interactive = false): void
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Ingressos | AcquaVale Park</title>
 <meta name="description" content="Compre ingressos e adicionais para o AcquaVale Park.">
 <link rel="stylesheet" href="assets/css/app.css">
