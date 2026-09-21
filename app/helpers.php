@@ -24,6 +24,12 @@ function url(string $path=''): string {
     return base_path().($path==='/' ? '/' : $path);
 }
 
+function absolute_url(string $path=''): string {
+    $base=rtrim((string)cfg('app.url',''),'/');
+    if ($base==='') return url($path);
+    return $base.'/'.ltrim($path,'/');
+}
+
 function csrf_token(): string {
     if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(32));
     return $_SESSION['csrf'];
