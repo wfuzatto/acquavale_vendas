@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS orders (
  paid_at DATETIME NULL,
  integration_status ENUM('not_ready','pending','claimed','processed','error') NOT NULL DEFAULT 'not_ready',
  integration_claim_token CHAR(64) NULL,
+ integration_claim_consumer VARCHAR(100) NULL,
  integration_claimed_at DATETIME NULL,
  integration_processed_at DATETIME NULL,
  created_at DATETIME NOT NULL,
@@ -119,3 +120,23 @@ CREATE TABLE IF NOT EXISTS audit_log (
  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
  INDEX idx_audit_created(created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+CREATE TABLE IF NOT EXISTS ticket_integrations (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ ticket_id BIGINT UNSIGNED NOT NULL,
+ consumer VARCHAR(100) NOT NULL,
+ state ENUM('pending','imported','syncing','confirmed','failed') NOT NULL DEFAULT 'pending',
+ external_reservation_id VARCHAR(190) NULL,
+ hcp_visitor_id VARCHAR(190) NULL,
+ hcp_reference VARCHAR(190) NULL,
+ message TEXT NULL,
+ details JSON NULL,
+ last_attempt_at DATETIME NULL,
+ confirmed_at DATETIME NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ CONSTRAINT fk_ticket_integrations_ticket FOREIGN KEY(ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+ UNIQUE KEY uq_ticket_consumer(ticket_id,consumer),
+ INDEX idx_ticket_integrations_state(state,updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
