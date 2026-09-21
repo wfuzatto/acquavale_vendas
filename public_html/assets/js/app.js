@@ -740,10 +740,6 @@
         updateHeaderCart();
     });
 
-    ['gesturestart', 'gesturechange', 'gestureend'].forEach(eventName => {
-        document.addEventListener(eventName, event => event.preventDefault(), { passive: false });
-    });
-
     ensureAppUi();
     readCart();
     updateProgress(currentStep);
