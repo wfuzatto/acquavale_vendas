@@ -123,8 +123,12 @@
         document.getElementById('reservation-result-uh').textContent = data.uh || '—';
 
         const guests = [];
-        if (data.adults) guests.push(data.adults + ' adulto(s)');
-        if (data.children) guests.push(data.children + ' criança(s)');
+        if (data.guest_count) {
+            guests.push(data.guest_count + (String(data.guest_count) === '1' ? ' hóspede' : ' hóspedes'));
+        } else {
+            if (data.adults) guests.push(data.adults + ' adulto(s)');
+            if (data.children) guests.push(data.children + ' criança(s)');
+        }
         document.getElementById('reservation-result-guests').textContent = guests.join(' · ') || '—';
 
         result.hidden = false;
