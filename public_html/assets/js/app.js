@@ -204,8 +204,8 @@
                 updateProgress(0);
                 document.getElementById('reservation-result')?.setAttribute('hidden', '');
                 openAppModal(
-                    'Reserva não localizada',
-                    escapeHtml(data.message || 'Não foi possível validar esta reserva no Expresso. Confira o número e tente novamente.'),
+                    'Falha na consulta da reserva',
+                    escapeHtml(data.message || 'Não foi possível validar esta reserva. Confira o número e tente novamente.'),
                     'error'
                 );
                 return;
