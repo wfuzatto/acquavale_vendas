@@ -74,6 +74,12 @@ final class Database {
             $prefixedExists=(bool)$exists->fetchColumn();
 
             if ($legacyExists && $prefixedExists) {
+                // A previous release may have left an empty legacy migration
+                // ledger beside the populated prefixed ledger. Keep the empty
+                // table untouched and continue using the prefixed one.
+                if ($legacy==='app_migrations' && !$pdo->query("SELECT 1 FROM `{$legacy}` LIMIT 1")->fetchColumn()) {
+                    continue;
+                }
                 throw new RuntimeException(
                     "Conflito de tabelas: existem '{$legacy}' e '{$prefixed}'. " .
                     "A migração automática foi interrompida para evitar perda de dados."
@@ -181,7 +187,8 @@ final class Database {
             $callback($pdo);
             $save=$pdo->prepare("INSERT INTO {$migrations}(migration,applied_at) VALUES(?,NOW())");
             $save->execute([$migration]);
-            $pdo->commit();
+            // MySQL commits DDL implicitly, which may end the transaction.
+            if ($pdo->inTransaction()) $pdo->commit();
         } catch (\Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             throw $e;
