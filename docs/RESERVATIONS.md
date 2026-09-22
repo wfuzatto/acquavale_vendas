@@ -24,7 +24,8 @@ Para usar o backend iPlate, defina `provider` como `iplate` e preencha a seção
 realmente está instalado e uma conta de operador ativa.
 
 Para instalações antigas sem `reservation.provider`, o AcquaVale seleciona
-iPlate se `iplate.username` estiver preenchido; caso contrário, seleciona Expresso.
+Expresso primeiro quando `expresso.user` e `expresso.password` estiverem preenchidos.
+Somente se Expresso não estiver configurado ele tenta o backend iPlate.
 Senhas e tokens ficam no servidor. O arquivo local não deve entrar no Git.
 
 HTTP 200 com `token: null` não autoriza uma consulta: o serviço não emitiu um token
