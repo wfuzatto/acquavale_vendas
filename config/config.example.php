@@ -25,9 +25,9 @@ return [
     'uploads' => [
         'max_photo_mb' => 8,
     ],
-    // Use 'expresso' for the same details endpoint as the iPlate Android app,
-    // or 'iplate' for its authenticated reservation-search.php backend.
-    'reservation' => ['provider' => 'iplate'],
+    // 'expresso' is the production default because it uses the same reservation
+    // details flow that already works in the local installation. iPlate remains optional.
+    'reservation' => ['provider' => 'expresso'],
     'expresso' => [
         'token_url' => 'https://vale.expresso.app/api/obter_token',
         'reservation_url' => 'https://vale.expresso.app/api/reserva',
