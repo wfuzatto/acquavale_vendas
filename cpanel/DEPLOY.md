@@ -91,40 +91,68 @@ A API key fica em `config/config.local.php`.
 O arquivo `config/config.local.php`, o lock de instalação e as fotos não entram no Git. Assim é possível atualizar o código sem sobrescrever senha do banco, credenciais da API ou imagens dos visitantes.
 
 
-## 7. Validação de reserva via backend iPlate
+## 7. Validação de reserva
 
 A compra começa no **Passo 0 - Reserva**.
 
-O AcquaVale Vendas replica o fluxo completo já usado pelo app iPlate:
+### Provedor padrão: Expresso
 
-1. faz login server-side em `login.php`;
-2. recebe o `api_token` do usuário iPlate;
-3. consulta `reservation-search.php` com esse token e o número exato da reserva;
-4. somente reservas com status **confirmada** ou **checkin** liberam a compra;
-5. antes de criar o pedido, a reserva é consultada novamente no servidor.
+Produção deve usar, por padrão, a mesma consulta de detalhes de reserva que já funciona na instalação local:
 
-URL padrão do backend:
+1. POST JSON em `https://vale.expresso.app/api/obter_token`;
+2. recebe um token válido;
+3. POST JSON em `https://vale.expresso.app/api/reserva`;
+4. envia `token` + `numero_reserva`;
+5. somente após a reserva ser validada o sistema libera a compra;
+6. antes de criar o pedido, a reserva é consultada novamente no servidor.
 
-`https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php`
+Instalações novas devem selecionar **Expresso (recomendado)** no instalador e informar usuário/senha da API.
 
-O sistema deriva automaticamente os endpoints `login.php` e `reservation-search.php`.
-
-Em instalações novas, informe no instalador:
-- URL do backend iPlate;
-- usuário do backend iPlate;
-- senha do backend iPlate.
-
-Em uma instalação já existente, acrescente ao `config/config.local.php`:
+Configuração:
 
 ```php
-'iplate' => [
-    'server_url' => 'https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php',
-    'username' => 'SEU_USUARIO_IPLATE',
-    'password' => 'SUA_SENHA_IPLATE',
+'reservation' => [
+    'provider' => 'expresso',
+],
+'expresso' => [
+    'token_url' => 'https://vale.expresso.app/api/obter_token',
+    'reservation_url' => 'https://vale.expresso.app/api/reserva',
+    'user' => 'SEU_USUARIO_EXPRESSO',
+    'password' => 'SUA_SENHA_EXPRESSO',
     'timeout_seconds' => 20,
 ],
 ```
 
-A senha e o token nunca são enviados ao navegador. O `api_token` é obtido no servidor e armazenado apenas na sessão por até 30 minutos. Se o backend responder 401, o token é descartado, um novo login é feito e a consulta é tentada novamente.
+### Backend iPlate opcional
 
-O fluxo antigo de autenticação direta em `/api/obter_token` não é mais necessário para validar a compra.
+O backend iPlate continua disponível como alternativa:
+
+```php
+'reservation' => [
+    'provider' => 'iplate',
+],
+'iplate' => [
+    'server_url' => 'https://SERVIDOR/iplate/backend/api/vehicle-entry-create.php',
+    'username' => 'USUARIO_IPLATE',
+    'password' => 'SENHA_IPLATE',
+    'timeout_seconds' => 20,
+],
+```
+
+O endereço informado precisa realmente publicar `login.php` e `reservation-search.php`.
+Um HTTP 404 nesses endpoints significa que o caminho do backend iPlate não existe naquele servidor.
+
+### Atualização de instalações antigas
+
+Se `reservation.provider` não existir, o AcquaVale tenta automaticamente:
+
+1. Expresso, quando `expresso.user` e `expresso.password` estão configurados;
+2. iPlate, somente quando Expresso não está configurado.
+
+Para evitar qualquer ambiguidade em produção, defina explicitamente:
+
+```php
+'reservation' => ['provider' => 'expresso'],
+```
+
+As credenciais ficam somente em `config/config.local.php` e nunca devem ser versionadas.
