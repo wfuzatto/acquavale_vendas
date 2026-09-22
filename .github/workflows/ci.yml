@@ -13,8 +13,16 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.3'
+          extensions: curl
       - name: Lint PHP
-        run: find app config public_html -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: find app config public_html tests -name '*.php' -print0 | xargs -0 -n1 php -l
       - name: Autoload smoke test
         run: |
-          php -r "require 'config/bootstrap.php'; exit(class_exists('AcquaVale\\IPlateReservationService') ? 0 : 1);"
+          php -r "require 'config/bootstrap.php'; exit(class_exists('AcquaVale\\IPlateReservationService') && class_exists('AcquaVale\\ExpressoReservationService') && class_exists('AcquaVale\\ReservationService') ? 0 : 1);"
+      - name: Reservation integration tests
+        run: |
+          php -S 127.0.0.1:18081 tests/fixtures/reservation-api.php > /tmp/aqv-reservation-fixture.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          sleep 1
+          AQV_TEST_API_URL=http://127.0.0.1:18081 php tests/reservation_service_test.php
