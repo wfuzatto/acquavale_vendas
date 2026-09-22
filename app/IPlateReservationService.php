@@ -79,15 +79,14 @@ final class IPlateReservationService
             'password'=>$password,
         ],$timeout);
 
+        $this->requireHttpSuccess($response,'autenticar');
+
         $json=$response['json'];
         $token=is_array($json)
             ? trim((string)($json['user']['api_token']??''))
             : '';
 
         if (
-            $response['error']!=='' ||
-            $response['http_code']<200 ||
-            $response['http_code']>=300 ||
             !is_array($json) ||
             empty($json['success']) ||
             $token===''
@@ -125,13 +124,7 @@ final class IPlateReservationService
             throw new UnauthorizedIPlateException();
         }
 
-        if (
-            $response['error']!=='' ||
-            $response['http_code']<200 ||
-            $response['http_code']>=300
-        ) {
-            throw new RuntimeException('Falha ao consultar a reserva no backend iPlate.');
-        }
+        $this->requireHttpSuccess($response,'consultar a reserva');
 
         $json=$response['json'];
         if (!is_array($json) || empty($json['success'])) {
@@ -188,6 +181,18 @@ final class IPlateReservationService
         }
 
         return rtrim($serverUrl,'/').'/api/'.$endpoint;
+    }
+
+    private function requireHttpSuccess(array $response,string $operation): void
+    {
+        if ($response['error']!=='') {
+            throw new RuntimeException("Falha de conexão com o backend iPlate ao {$operation}.");
+        }
+        $http=$response['http_code'];
+        if ($http<200 || $http>=300) {
+            $detail=$http===404 ? ' Confira o endereço do backend iPlate.' : '';
+            throw new RuntimeException("O backend iPlate retornou HTTP {$http} ao {$operation}.".$detail);
+        }
     }
 
     private function postForm(string $url,array $fields,int $timeout): array
