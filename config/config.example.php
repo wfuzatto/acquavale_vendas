@@ -25,6 +25,16 @@ return [
     'uploads' => [
         'max_photo_mb' => 8,
     ],
+    // Use 'expresso' for the same details endpoint as the iPlate Android app,
+    // or 'iplate' for its authenticated reservation-search.php backend.
+    'reservation' => ['provider' => 'iplate'],
+    'expresso' => [
+        'token_url' => 'https://vale.expresso.app/api/obter_token',
+        'reservation_url' => 'https://vale.expresso.app/api/reserva',
+        'user' => '',
+        'password' => '',
+        'timeout_seconds' => 20,
+    ],
     'iplate' => [
         'server_url' => 'https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php',
         'username' => 'TROQUE_AQUI',
