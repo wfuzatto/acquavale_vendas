@@ -151,6 +151,18 @@ final class Database {
             }
         });
 
+        self::migrate($pdo, '20260922_visitor_push_tracking', function(PDO $pdo): void {
+            $columns=[
+                'integration_push_attempts' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN integration_push_attempts INT UNSIGNED NOT NULL DEFAULT 0 AFTER integration_processed_at",
+                'integration_push_last_at' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN integration_push_last_at DATETIME NULL AFTER integration_push_attempts",
+                'integration_push_last_error' => "ALTER TABLE acquavale_vendas_orders ADD COLUMN integration_push_last_error TEXT NULL AFTER integration_push_last_at",
+            ];
+            foreach ($columns as $column=>$sql) {
+                $check=$pdo->query("SHOW COLUMNS FROM acquavale_vendas_orders LIKE ".$pdo->quote($column))->fetch();
+                if (!$check) $pdo->exec($sql);
+            }
+        });
+
         self::migrate($pdo, '20260921_ticket_integrations', function(PDO $pdo): void {
             $pdo->exec(
                 "CREATE TABLE IF NOT EXISTS acquavale_vendas_ticket_integrations (
