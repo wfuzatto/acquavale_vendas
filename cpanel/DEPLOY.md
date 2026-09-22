@@ -156,3 +156,39 @@ Para evitar qualquer ambiguidade em produção, defina explicitamente:
 ```
 
 As credenciais ficam somente em `config/config.local.php` e nunca devem ser versionadas.
+
+
+## 8. Vale Visitor local / HikCentral
+
+Depois que o pagamento é aprovado, o AcquaVale Vendas tenta enviar a venda para o Vale Visitor local.
+
+Configure em `config/config.local.php`:
+
+```php
+'visitor_receiver' => [
+    'url' => 'https://SEU-ENDERECO-PUBLICO:8443/acquavale_receive.php',
+    'shared_secret' => 'MESMA_CHAVE_HMAC_DO_VALE_VISITOR',
+    'consumer' => 'vale-visitor',
+    'tls_verify' => true,
+],
+```
+
+A entrega usa:
+- JSON por HTTPS;
+- `X-AQV-Timestamp`;
+- `X-AQV-Delivery-Id`;
+- `X-AQV-Signature: sha256=...`.
+
+Se o Vale Visitor estiver offline, o pagamento não é revertido. O pedido permanece pendente/claimed e pode ser reenviado pelo cron:
+
+```bash
+php /home/SEU_USUARIO/acquavale_vendas/scripts/dispatch_visitor.php
+```
+
+Cadastre esse comando no Cron Jobs do cPanel, idealmente a cada minuto.
+
+O Vale Visitor faz o processamento HikCentral em segundo plano e devolve:
+1. `sale-ticket-status=imported/syncing/confirmed/failed`;
+2. `sale-ack` somente quando todos os tickets do pedido estiverem confirmados nas catracas.
+
+Para produção, use HTTPS. Não publique o HikCentral diretamente na internet.
