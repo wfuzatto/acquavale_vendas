@@ -334,6 +334,15 @@ final class OrderService
         }
 
         $pdo->commit();
+
+        // Payment confirmation must never fail just because the local receiver is
+        // temporarily offline. Try an immediate push and let the cron dispatcher
+        // retry any pending/claimed order afterwards.
+        try {
+            (new VisitorPushService())->dispatchOrder($orderId);
+        } catch (Throwable $e) {
+            error_log('Vale Visitor push after payment: '.$e->getMessage());
+        }
     }
 
     public function getOrderByCode(string $code): ?array
