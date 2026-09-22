@@ -22,6 +22,12 @@ return [
         'key' => 'SUBSTITUA_POR_UMA_CHAVE_LONGA_E_ALEATORIA',
         'claim_ttl_minutes' => 10,
     ],
+    'visitor_receiver' => [
+        'url' => 'https://SEU-ENDERECO-PUBLICO/visitor/acquavale_receive.php',
+        'shared_secret' => 'SUBSTITUA_POR_UMA_CHAVE_HMAC_LONGA_E_ALEATORIA',
+        'consumer' => 'vale-visitor',
+        'tls_verify' => true,
+    ],
     'uploads' => [
         'max_photo_mb' => 8,
     ],
