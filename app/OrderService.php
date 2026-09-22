@@ -17,7 +17,7 @@ final class OrderService
         }
 
         // Double check server-side: nunca confia apenas no passo visual do navegador.
-        $reservation=(new IPlateReservationService())->lookup((string)$sessionReservation['reservation_code']);
+        $reservation=(new ReservationService())->lookup((string)$sessionReservation['reservation_code']);
         $_SESSION['validated_reservation']=$reservation;
 
         $cart = $payload['cart'] ?? [];
