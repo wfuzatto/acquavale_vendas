@@ -35,7 +35,7 @@ O DocumentRoot do domínio/subdomínio deve apontar para `public_html/`.
 - painel administrativo;
 - API autenticada para catracas/face scanner;
 - validação transacional e idempotente;
-- fila de integração de vendas com claim + ACK, evitando duplicidade de efeito;
+- fila de integração de vendas com claim + ACK, evitando duplicidade de efeito;\n- push HTTPS/HMAC para o Vale Visitor local após pagamento, com retry por cron e confirmação real do HikCentral;
 - instalador web para cPanel;
 - validação server-side da reserva, com Expresso como padrão e backend iPlate opcional.
 
