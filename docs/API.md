@@ -34,7 +34,7 @@ A validação trava a linha do ingresso dentro de transação. A resposta válid
 
 ## Integração com Vale Visitor / HikCentral
 
-O fluxo recomendado é **pull local**. O servidor Vale Visitor consulta o AcquaVale Vendas por HTTPS; o servidor web não abre conexão diretamente para a rede local.
+O fluxo principal é **push online → Vale Visitor local**. Após o pagamento, o AcquaVale Vendas envia a venda para o receiver local por HTTPS com assinatura HMAC. O fluxo `sale-next` continua disponível como fallback/pull para diagnóstico ou contingência.
 
 ### 1. Buscar venda paga
 
@@ -81,3 +81,23 @@ O ACK é recusado enquanto qualquer ticket do pedido não estiver `confirmed` pa
 ```
 
 Retorna o estado por ticket e os IDs persistidos do sistema local/HikCentral.
+
+
+### Push assinado para o Vale Visitor
+
+O site envia `sale.paid` para a URL configurada em `visitor_receiver.url`.
+
+Cabeçalhos:
+- `X-AQV-Timestamp`
+- `X-AQV-Delivery-Id`
+- `X-AQV-Signature: sha256=<HMAC>`
+
+A assinatura é:
+
+```text
+HMAC-SHA256(shared_secret, timestamp + "\n" + raw_json_body)
+```
+
+O payload inclui `order_code`, `claim_token`, itens, tickets, dados do visitante, validade e `photo_url`. A foto continua protegida pela API key e é baixada pelo Vale Visitor usando `Authorization: Bearer`.
+
+O receiver local deve responder HTTP 202 rapidamente; a comunicação com o HikCentral acontece no worker local, não dentro da requisição do site.
