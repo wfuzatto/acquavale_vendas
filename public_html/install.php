@@ -58,6 +58,9 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
         $iplateUsername=trim((string)($_POST['iplate_username']??''));
         $iplatePassword=(string)($_POST['iplate_password']??'');
         $visitorReceiverUrl=rtrim(trim((string)($_POST['visitor_receiver_url']??'')),'/');
+        $visitorReceiverSecret=trim((string)($_POST['visitor_receiver_secret']??''));
+        $visitorReceiverTls=!empty($_POST['visitor_receiver_tls']);
+        $visitorReceiverUrl=rtrim(trim((string)($_POST['visitor_receiver_url']??'')),'/');
         $visitorSharedSecret=trim((string)($_POST['visitor_shared_secret']??''));
 
         if($dbName===''||$dbUser==='') throw new RuntimeException('Informe o banco e o usuário MySQL criados no cPanel.');
@@ -122,6 +125,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
                 'shared_secret'=>$visitorSharedSecret,
                 'consumer'=>'vale-visitor',
                 'tls_verify'=>true,
+            ],
+            'visitor_receiver'=>[
+                'url'=>$visitorReceiverUrl,
+                'shared_secret'=>$visitorReceiverSecret,
+                'consumer'=>'vale-visitor',
+                'tls_verify'=>$visitorReceiverTls,
             ],
             'uploads'=>[
                 'max_photo_mb'=>8,
@@ -201,6 +210,10 @@ $checks=[
 <div class="form-group full reservation-provider-fields" data-provider="iplate"><label>URL do backend iPlate</label><input name="iplate_server_url" value="<?=htmlspecialchars((string)($_POST['iplate_server_url']??'https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php'))?>"><small>O sistema deriva automaticamente <code>login.php</code> e <code>reservation-search.php</code>.</small></div>
 <div class="form-group reservation-provider-fields" data-provider="iplate"><label>Usuário do backend iPlate</label><input name="iplate_username" value="<?=htmlspecialchars((string)($_POST['iplate_username']??''))?>" autocomplete="username"></div>
 <div class="form-group reservation-provider-fields" data-provider="iplate"><label>Senha do backend iPlate</label><input type="password" name="iplate_password" autocomplete="new-password"></div>
+<div class="form-group full" style="margin-top:10px"><div class="notice"><strong>Vale Visitor local:</strong> opcional durante a instalação. Quando configurado, vendas pagas são enviadas automaticamente por webhook HMAC para o servidor local, que grava a venda e depois sincroniza com o HikCentral.</div></div>
+<div class="form-group full"><label>URL pública do receiver Vale Visitor</label><input name="visitor_receiver_url" value="<?=htmlspecialchars((string)($_POST['visitor_receiver_url']??''))?>" placeholder="https://visitor.seudominio.com.br/acquavale_receive.php"><small>Recomendado: HTTPS. O HikCentral não deve ser exposto diretamente.</small></div>
+<div class="form-group"><label>Segredo compartilhado HMAC</label><input type="password" name="visitor_receiver_secret" value="<?=htmlspecialchars((string)($_POST['visitor_receiver_secret']??''))?>" autocomplete="new-password"><small>Use exatamente o mesmo valor em VALE_AQV_SHARED_SECRET no Vale Visitor.</small></div>
+<div class="form-group"><label style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" name="visitor_receiver_tls" value="1" style="width:auto" <?=!isset($_POST['visitor_receiver_tls'])||!empty($_POST['visitor_receiver_tls'])?'checked':''?>> Validar certificado TLS do receiver</label></div>
 
 <div class="form-group full" style="margin-top:10px"><div class="notice"><strong>Vale Visitor local:</strong> opcional na instalação. Quando configurado, vendas pagas são enviadas por HTTPS para o receiver local com assinatura HMAC e depois confirmadas pelo HikCentral.</div></div>
 <div class="form-group full"><label>URL pública do receiver Vale Visitor</label><input name="visitor_receiver_url" value="<?=htmlspecialchars((string)($_POST['visitor_receiver_url']??''))?>" placeholder="https://seu-endereco:8443/acquavale_receive.php"><small>Prefira HTTPS. Pode deixar em branco e configurar depois no <code>config.local.php</code>.</small></div>
