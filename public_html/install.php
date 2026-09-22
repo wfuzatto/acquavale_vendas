@@ -57,6 +57,8 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
         $iplateServerUrl=rtrim(trim((string)($_POST['iplate_server_url']??'https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php')),'/');
         $iplateUsername=trim((string)($_POST['iplate_username']??''));
         $iplatePassword=(string)($_POST['iplate_password']??'');
+        $visitorReceiverUrl=rtrim(trim((string)($_POST['visitor_receiver_url']??'')),'/');
+        $visitorSharedSecret=trim((string)($_POST['visitor_shared_secret']??''));
 
         if($dbName===''||$dbUser==='') throw new RuntimeException('Informe o banco e o usuário MySQL criados no cPanel.');
         if(!filter_var($adminEmail,FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Informe um e-mail administrativo válido.');
@@ -69,6 +71,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
             if($iplateServerUrl==='') throw new RuntimeException('Informe a URL do backend iPlate.');
             if($iplateUsername==='') throw new RuntimeException('Informe o usuário do backend iPlate.');
             if($iplatePassword==='') throw new RuntimeException('Informe a senha do backend iPlate.');
+        }
+        if(($visitorReceiverUrl==='') xor ($visitorSharedSecret==='')) {
+            throw new RuntimeException('Para integrar o Vale Visitor, informe juntos a URL do receiver e o shared secret.');
+        }
+        if($visitorSharedSecret!=='' && strlen($visitorSharedSecret)<32) {
+            throw new RuntimeException('O shared secret do Vale Visitor deve ter pelo menos 32 caracteres.');
         }
 
         $pdo=new PDO(
@@ -108,6 +116,12 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
             'api'=>[
                 'key'=>bin2hex(random_bytes(32)),
                 'claim_ttl_minutes'=>10,
+            ],
+            'visitor_receiver'=>[
+                'url'=>$visitorReceiverUrl,
+                'shared_secret'=>$visitorSharedSecret,
+                'consumer'=>'vale-visitor',
+                'tls_verify'=>true,
             ],
             'uploads'=>[
                 'max_photo_mb'=>8,
@@ -187,6 +201,10 @@ $checks=[
 <div class="form-group full reservation-provider-fields" data-provider="iplate"><label>URL do backend iPlate</label><input name="iplate_server_url" value="<?=htmlspecialchars((string)($_POST['iplate_server_url']??'https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php'))?>"><small>O sistema deriva automaticamente <code>login.php</code> e <code>reservation-search.php</code>.</small></div>
 <div class="form-group reservation-provider-fields" data-provider="iplate"><label>Usuário do backend iPlate</label><input name="iplate_username" value="<?=htmlspecialchars((string)($_POST['iplate_username']??''))?>" autocomplete="username"></div>
 <div class="form-group reservation-provider-fields" data-provider="iplate"><label>Senha do backend iPlate</label><input type="password" name="iplate_password" autocomplete="new-password"></div>
+
+<div class="form-group full" style="margin-top:10px"><div class="notice"><strong>Vale Visitor local:</strong> opcional na instalação. Quando configurado, vendas pagas são enviadas por HTTPS para o receiver local com assinatura HMAC e depois confirmadas pelo HikCentral.</div></div>
+<div class="form-group full"><label>URL pública do receiver Vale Visitor</label><input name="visitor_receiver_url" value="<?=htmlspecialchars((string)($_POST['visitor_receiver_url']??''))?>" placeholder="https://seu-endereco:8443/acquavale_receive.php"><small>Prefira HTTPS. Pode deixar em branco e configurar depois no <code>config.local.php</code>.</small></div>
+<div class="form-group full"><label>Shared secret HMAC</label><input type="password" name="visitor_shared_secret" minlength="32" autocomplete="new-password"><small>Use a mesma chave em <code>VALE_AQV_SHARED_SECRET</code> no Vale Visitor local.</small></div>
 </div><button class="btn btn-primary" style="margin-top:20px">Instalar sistema</button></form></div>
 <script>
 (function(){
