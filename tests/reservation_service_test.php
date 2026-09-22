@@ -59,11 +59,28 @@ foreach (['http-error'=>'HTTP 503','invalid-json'=>'JSON inválida','wrong-code'
 configFor();
 $GLOBALS['aqv_config']['iplate']=['server_url'=>$base.'/api/vehicle-entry-create.php',
     'username'=>'fixture-user','password'=>'fixture-password','timeout_seconds'=>5];
+
+// Legacy/auto mode must prefer Expresso when both are configured.
 $r=(new AcquaVale\ReservationService())->lookup('2505371');
-expect($r['source']==='iplate_backend' && $r['guest_count']==='2','Existing iPlate config must work'); $passed++;
+expect($r['source']==='expresso_api','Auto mode must prefer Expresso when both providers are configured'); $passed++;
+
+// If Expresso credentials are absent, legacy/auto mode can fall back to iPlate.
+$GLOBALS['aqv_config']['expresso']['user']='';
+$GLOBALS['aqv_config']['expresso']['password']='';
+$r=(new AcquaVale\ReservationService())->lookup('2505371');
+expect($r['source']==='iplate_backend' && $r['guest_count']==='2','Auto mode must fall back to iPlate when Expresso is unavailable'); $passed++;
+
+// Explicit provider always takes precedence.
+configFor();
+$GLOBALS['aqv_config']['iplate']=['server_url'=>$base.'/api/vehicle-entry-create.php',
+    'username'=>'fixture-user','password'=>'fixture-password','timeout_seconds'=>5];
+$GLOBALS['aqv_config']['reservation']['provider']='iplate';
+$r=(new AcquaVale\ReservationService())->lookup('2505371');
+expect($r['source']==='iplate_backend','Explicit iPlate provider must take precedence'); $passed++;
+
 $GLOBALS['aqv_config']['reservation']['provider']='expresso';
 $r=(new AcquaVale\ReservationService())->lookup('2505371');
-expect($r['source']==='expresso_api','Explicit provider must take precedence'); $passed++;
+expect($r['source']==='expresso_api','Explicit Expresso provider must take precedence'); $passed++;
 $_SESSION=[];
 $GLOBALS['aqv_config']['reservation']['provider']='iplate';
 $GLOBALS['aqv_config']['iplate']['username']='missing-endpoint';
