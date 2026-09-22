@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require dirname(__DIR__).'/config/bootstrap.php';
 
-use AcquaVale\IPlateReservationService;
+use AcquaVale\ReservationService;
 
 if ($_SERVER['REQUEST_METHOD']!=='POST') {
     json_response(['ok'=>false,'error'=>'method_not_allowed'],405);
@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD']!=='POST') {
 $input=json_input();
 $csrf=(string)($input['_csrf']??($_SERVER['HTTP_X_CSRF_TOKEN']??''));
 if ($csrf==='' || !hash_equals($_SESSION['csrf']??'',$csrf)) {
-    json_response(['ok'=>false,'error'=>'csrf','message'=>'Sessão expirada. Atualize a página.'],419);
+    json_response(['ok'=>false,'error'=>'csrf','message'=>'Sessão expirada. Atualize a página.'],403);
 }
 
 $action=trim((string)($input['action']??'lookup'));
@@ -32,7 +32,7 @@ if ($code==='') {
 }
 
 try {
-    $service=new IPlateReservationService();
+    $service=new ReservationService();
     $reservation=$service->lookup($code);
 
     $_SESSION['validated_reservation']=$reservation;
@@ -43,7 +43,7 @@ try {
     ]);
 } catch (Throwable $e) {
     unset($_SESSION['validated_reservation']);
-    error_log('iPlate reservation lookup: '.$e->getMessage());
+    error_log('Reservation lookup: '.$e->getMessage());
 
     json_response([
         'ok'=>false,
