@@ -3,9 +3,12 @@ declare(strict_types=1);
 require dirname(__DIR__).'/config/bootstrap.php';
 
 use AcquaVale\Auth;
+use AcquaVale\VisitorPushService;
 
 $action=$_GET['action']??'dashboard';
 $error=null;
+$visitorDebug=$_SESSION['visitor_resend_debug']??null;
+unset($_SESSION['visitor_resend_debug']);
 
 if($action==='logout'){Auth::logout();redirect(url('admin.php?action=login'));}
 
