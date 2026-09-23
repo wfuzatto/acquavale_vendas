@@ -26,7 +26,7 @@ final class VisitorPushService
         return $this->url!=='' && $this->secret!=='';
     }
 
-    public function dispatchOrder(int $orderId): array
+    public function dispatchOrder(int $orderId,bool $forceResend=false): array
     {
         if (!$this->configured()) {
             return ['ok'=>false,'skipped'=>true,'error'=>'receiver_not_configured'];
@@ -50,7 +50,7 @@ final class VisitorPushService
                 throw new RuntimeException('Pedido pago não encontrado para integração.');
             }
 
-            if ($order['integration_status']==='processed') {
+            if ($order['integration_status']==='processed' && !$forceResend) {
                 $pdo->commit();
                 return ['ok'=>true,'already_processed'=>true];
             }
@@ -58,17 +58,30 @@ final class VisitorPushService
             $claim=(string)($order['integration_claim_token']??'');
             if ($claim==='') $claim=bin2hex(random_bytes(32));
 
-            $pdo->prepare(
-                "UPDATE acquavale_vendas_orders
-                 SET integration_status='claimed',
-                     integration_claim_token=?,
-                     integration_claim_consumer=?,
-                     integration_claimed_at=NOW(),
-                     integration_push_attempts=COALESCE(integration_push_attempts,0)+1,
-                     integration_push_last_at=NOW(),
-                     updated_at=NOW()
-                 WHERE id=?"
-            )->execute([$claim,$this->consumer,$orderId]);
+            if ($forceResend) {
+                // Debug resend must not regress a processed order back to claimed.
+                $pdo->prepare(
+                    "UPDATE acquavale_vendas_orders
+                     SET integration_claim_token=COALESCE(NULLIF(integration_claim_token,''),?),
+                         integration_claim_consumer=COALESCE(NULLIF(integration_claim_consumer,''),?),
+                         integration_push_attempts=COALESCE(integration_push_attempts,0)+1,
+                         integration_push_last_at=NOW(),
+                         updated_at=NOW()
+                     WHERE id=?"
+                )->execute([$claim,$this->consumer,$orderId]);
+            } else {
+                $pdo->prepare(
+                    "UPDATE acquavale_vendas_orders
+                     SET integration_status='claimed',
+                         integration_claim_token=?,
+                         integration_claim_consumer=?,
+                         integration_claimed_at=NOW(),
+                         integration_push_attempts=COALESCE(integration_push_attempts,0)+1,
+                         integration_push_last_at=NOW(),
+                         updated_at=NOW()
+                     WHERE id=?"
+                )->execute([$claim,$this->consumer,$orderId]);
+            }
 
             $s=$pdo->prepare(
                 "SELECT oi.*
@@ -132,7 +145,9 @@ final class VisitorPushService
 
         $raw=json_encode($payload,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
         $timestamp=(string)time();
-        $deliveryId=hash('sha256',$payload['order']['order_code']."\n".$payload['order']['claim_token']);
+        $deliverySeed=$payload['order']['order_code']."\n".$payload['order']['claim_token'];
+        if ($forceResend) $deliverySeed.="\nDEBUG-".bin2hex(random_bytes(16));
+        $deliveryId=hash('sha256',$deliverySeed);
         $signature=hash_hmac('sha256',$timestamp."\n".$raw,$this->secret);
 
         try {
@@ -154,6 +169,7 @@ final class VisitorPushService
                 'ok'=>true,
                 'http_code'=>$response['http_code'],
                 'response'=>$response['json'],
+                'force_resend'=>$forceResend,
             ];
         } catch (Throwable $e) {
             \db()->prepare(
