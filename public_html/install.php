@@ -23,6 +23,61 @@ $https=(!empty($_SERVER['HTTPS'])&&$_SERVER['HTTPS']!=='off')||($_SERVER['HTTP_X
 $host=$_SERVER['HTTP_HOST']??'localhost';
 $detectedUrl=($https?'https':'http').'://'.$host.$detectedBase;
 
+// Defaults de debug para acelerar testes sem versionar credenciais.
+$installDefaults=[
+    'db_host'=>'prodatastelecom.mysql.dbaas.com.br',
+    'db_port'=>'3306',
+    'db_name'=>'prodatasteleco',
+    'db_user'=>'prodatasteleco',
+    'db_password'=>'',
+    'admin_email'=>'wesley@prodatastelecom.com.br',
+    'admin_password'=>'',
+    'app_url'=>'http://prodatastelecom.com.br/sites/acquavale/public_html',
+    'base_path'=>'/sites/acquavale/public_html',
+    'reservation_provider'=>'expresso',
+    'expresso_user'=>'wesley@prodatastelecom.com.br',
+    'expresso_password'=>'',
+    'iplate_server_url'=>'https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php',
+    'iplate_username'=>'',
+    'iplate_password'=>'',
+    'visitor_receiver_url'=>'https://608905397dde.sn.mynetname.net:37443/visitor/acquavale_receive.php',
+    'visitor_receiver_secret'=>'',
+    'visitor_receiver_tls'=>false,
+];
+
+// Se já existir config.local.php (por exemplo em reinstalação/debug), reaproveita os valores privados.
+if(is_file($configFile)){
+    $existing=require $configFile;
+    if(is_array($existing)){
+        $installDefaults=array_replace($installDefaults,[
+            'db_host'=>(string)($existing['db']['host']??$installDefaults['db_host']),
+            'db_port'=>(string)($existing['db']['port']??$installDefaults['db_port']),
+            'db_name'=>(string)($existing['db']['name']??$installDefaults['db_name']),
+            'db_user'=>(string)($existing['db']['user']??$installDefaults['db_user']),
+            'db_password'=>(string)($existing['db']['password']??''),
+            'admin_email'=>(string)($existing['admin']['email']??$installDefaults['admin_email']),
+            'app_url'=>(string)($existing['app']['url']??$installDefaults['app_url']),
+            'base_path'=>(string)($existing['app']['base_path']??$installDefaults['base_path']),
+            'reservation_provider'=>(string)($existing['reservation']['provider']??$installDefaults['reservation_provider']),
+            'expresso_user'=>(string)($existing['expresso']['user']??$installDefaults['expresso_user']),
+            'expresso_password'=>(string)($existing['expresso']['password']??''),
+            'iplate_server_url'=>(string)($existing['iplate']['server_url']??$installDefaults['iplate_server_url']),
+            'iplate_username'=>(string)($existing['iplate']['username']??''),
+            'iplate_password'=>(string)($existing['iplate']['password']??''),
+            'visitor_receiver_url'=>(string)($existing['visitor_receiver']['url']??$installDefaults['visitor_receiver_url']),
+            'visitor_receiver_secret'=>(string)($existing['visitor_receiver']['shared_secret']??''),
+            'visitor_receiver_tls'=>(bool)($existing['visitor_receiver']['tls_verify']??false),
+        ]);
+    }
+}
+
+// Override privado opcional para debug; este arquivo é ignorado pelo Git.
+$debugDefaultsFile=$root.'/config/install.debug.local.php';
+if(is_file($debugDefaultsFile)){
+    $debugDefaults=require $debugDefaultsFile;
+    if(is_array($debugDefaults)) $installDefaults=array_replace($installDefaults,$debugDefaults);
+}
+
 function runSqlFile(PDO $pdo,string $file):void{
     $sql=file_get_contents($file);
     if($sql===false) throw new RuntimeException('Não foi possível ler '.basename($file));
@@ -42,24 +97,24 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
             if(!extension_loaded($ext)) throw new RuntimeException("A extensão PHP {$ext} não está habilitada.");
         }
 
-        $dbHost=trim((string)($_POST['db_host']??'localhost'));
-        $dbPort=max(1,(int)($_POST['db_port']??3306));
-        $dbName=trim((string)($_POST['db_name']??''));
-        $dbUser=trim((string)($_POST['db_user']??''));
-        $dbPass=(string)($_POST['db_password']??'');
-        $adminEmail=trim((string)($_POST['admin_email']??''));
-        $adminPassword=(string)($_POST['admin_password']??'');
-        $basePath=trim((string)($_POST['base_path']??$detectedBase));
-        $appUrl=rtrim(trim((string)($_POST['app_url']??$detectedUrl)),'/');
-        $reservationProvider=strtolower(trim((string)($_POST['reservation_provider']??'expresso')));
-        $expressoUser=trim((string)($_POST['expresso_user']??''));
-        $expressoPassword=(string)($_POST['expresso_password']??'');
-        $iplateServerUrl=rtrim(trim((string)($_POST['iplate_server_url']??'https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php')),'/');
-        $iplateUsername=trim((string)($_POST['iplate_username']??''));
-        $iplatePassword=(string)($_POST['iplate_password']??'');
-        $visitorReceiverUrl=rtrim(trim((string)($_POST['visitor_receiver_url']??'')),'/');
-        $visitorReceiverSecret=trim((string)($_POST['visitor_receiver_secret']??''));
-        $visitorReceiverTls=!empty($_POST['visitor_receiver_tls']);
+        $dbHost=trim((string)($_POST['db_host']??$installDefaults['db_host']));
+        $dbPort=max(1,(int)($_POST['db_port']??$installDefaults['db_port']));
+        $dbName=trim((string)($_POST['db_name']??$installDefaults['db_name']));
+        $dbUser=trim((string)($_POST['db_user']??$installDefaults['db_user']));
+        $dbPass=(string)($_POST['db_password']??$installDefaults['db_password']);
+        $adminEmail=trim((string)($_POST['admin_email']??$installDefaults['admin_email']));
+        $adminPassword=(string)($_POST['admin_password']??$installDefaults['admin_password']);
+        $basePath=trim((string)($_POST['base_path']??$installDefaults['base_path']));
+        $appUrl=rtrim(trim((string)($_POST['app_url']??$installDefaults['app_url'])),'/');
+        $reservationProvider=strtolower(trim((string)($_POST['reservation_provider']??$installDefaults['reservation_provider'])));
+        $expressoUser=trim((string)($_POST['expresso_user']??$installDefaults['expresso_user']));
+        $expressoPassword=(string)($_POST['expresso_password']??$installDefaults['expresso_password']);
+        $iplateServerUrl=rtrim(trim((string)($_POST['iplate_server_url']??$installDefaults['iplate_server_url'])),'/');
+        $iplateUsername=trim((string)($_POST['iplate_username']??$installDefaults['iplate_username']));
+        $iplatePassword=(string)($_POST['iplate_password']??$installDefaults['iplate_password']);
+        $visitorReceiverUrl=rtrim(trim((string)($_POST['visitor_receiver_url']??$installDefaults['visitor_receiver_url'])),'/');
+        $visitorReceiverSecret=trim((string)($_POST['visitor_receiver_secret']??$installDefaults['visitor_receiver_secret']));
+        $visitorReceiverTls=array_key_exists('visitor_receiver_tls',$_POST)?!empty($_POST['visitor_receiver_tls']):(bool)$installDefaults['visitor_receiver_tls'];
 
         if($dbName===''||$dbUser==='') throw new RuntimeException('Informe o banco e o usuário MySQL criados no cPanel.');
         if(!filter_var($adminEmail,FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Informe um e-mail administrativo válido.');
@@ -182,30 +237,30 @@ $checks=[
 <div class="card panel"><h3 style="margin-top:0;color:var(--navy)">Dados do cPanel</h3><div class="notice" style="margin-bottom:20px">Antes de continuar, crie no cPanel um banco MySQL, um usuário MySQL e vincule o usuário ao banco com todos os privilégios. O instalador cria somente as tabelas.</div>
 <form method="post"><input type="hidden" name="_csrf" value="<?=htmlspecialchars($_SESSION['install_csrf'])?>">
 <div class="form-grid">
-<div class="form-group"><label>Host MySQL</label><input name="db_host" value="<?=htmlspecialchars((string)($_POST['db_host']??'localhost'))?>" required></div>
-<div class="form-group"><label>Porta</label><input type="number" name="db_port" value="<?=htmlspecialchars((string)($_POST['db_port']??'3306'))?>" required></div>
-<div class="form-group"><label>Nome do banco</label><input name="db_name" value="<?=htmlspecialchars((string)($_POST['db_name']??''))?>" placeholder="usuario_acquavale" required></div>
-<div class="form-group"><label>Usuário MySQL</label><input name="db_user" value="<?=htmlspecialchars((string)($_POST['db_user']??''))?>" placeholder="usuario_acquavale" required></div>
-<div class="form-group full"><label>Senha MySQL</label><input type="password" name="db_password" required autocomplete="new-password"></div>
-<div class="form-group"><label>E-mail administrador</label><input type="email" name="admin_email" value="<?=htmlspecialchars((string)($_POST['admin_email']??''))?>" required></div>
-<div class="form-group"><label>Senha administrador</label><input type="password" name="admin_password" minlength="10" required autocomplete="new-password"></div>
-<div class="form-group"><label>URL do sistema</label><input name="app_url" value="<?=htmlspecialchars((string)($_POST['app_url']??$detectedUrl))?>" required></div>
-<div class="form-group"><label>Caminho base</label><input name="base_path" value="<?=htmlspecialchars((string)($_POST['base_path']??$detectedBase))?>" placeholder="/ingressos"><small>Deixe vazio quando o domínio/subdomínio apontar diretamente para public_html.</small></div>
+<div class="form-group"><label>Host MySQL</label><input name="db_host" value="<?=htmlspecialchars((string)($_POST['db_host']??$installDefaults['db_host']))?>" required></div>
+<div class="form-group"><label>Porta</label><input type="number" name="db_port" value="<?=htmlspecialchars((string)($_POST['db_port']??$installDefaults['db_port']))?>" required></div>
+<div class="form-group"><label>Nome do banco</label><input name="db_name" value="<?=htmlspecialchars((string)($_POST['db_name']??$installDefaults['db_name']))?>" placeholder="usuario_acquavale" required></div>
+<div class="form-group"><label>Usuário MySQL</label><input name="db_user" value="<?=htmlspecialchars((string)($_POST['db_user']??$installDefaults['db_user']))?>" placeholder="usuario_acquavale" required></div>
+<div class="form-group full"><label>Senha MySQL</label><input type="password" name="db_password" value="<?=htmlspecialchars((string)($_POST['db_password']??$installDefaults['db_password']))?>" required autocomplete="new-password"></div>
+<div class="form-group"><label>E-mail administrador</label><input type="email" name="admin_email" value="<?=htmlspecialchars((string)($_POST['admin_email']??$installDefaults['admin_email']))?>" required></div>
+<div class="form-group"><label>Senha administrador</label><input type="password" name="admin_password" value="<?=htmlspecialchars((string)($_POST['admin_password']??$installDefaults['admin_password']))?>" minlength="10" required autocomplete="new-password"></div>
+<div class="form-group"><label>URL do sistema</label><input name="app_url" value="<?=htmlspecialchars((string)($_POST['app_url']??$installDefaults['app_url']))?>" required></div>
+<div class="form-group"><label>Caminho base</label><input name="base_path" value="<?=htmlspecialchars((string)($_POST['base_path']??$installDefaults['base_path']))?>" placeholder="/ingressos"><small>Deixe vazio quando o domínio/subdomínio apontar diretamente para public_html.</small></div>
 <div class="form-group full" style="margin-top:10px"><div class="notice"><strong>Validação de reservas:</strong> use <strong>Expresso</strong> como padrão de produção. O iPlate fica disponível como alternativa quando seu backend estiver publicado e acessível por HTTPS.</div></div>
-<div class="form-group full"><label>Provedor de reservas</label><select name="reservation_provider" id="reservation-provider"><option value="expresso" <?=($_POST['reservation_provider']??'expresso')==='expresso'?'selected':''?>>Expresso (recomendado)</option><option value="iplate" <?=($_POST['reservation_provider']??'')==='iplate'?'selected':''?>>Backend iPlate</option></select></div>
+<div class="form-group full"><label>Provedor de reservas</label><select name="reservation_provider" id="reservation-provider"><option value="expresso" <?=($_POST['reservation_provider']??$installDefaults['reservation_provider'])==='expresso'?'selected':''?>>Expresso (recomendado)</option><option value="iplate" <?=($_POST['reservation_provider']??'')==='iplate'?'selected':''?>>Backend iPlate</option></select></div>
 
 <div class="form-group full reservation-provider-fields" data-provider="expresso"><strong style="color:var(--navy)">API Expresso</strong><small>Mesmo fluxo que já funciona na instalação local: obter token e consultar a reserva.</small></div>
-<div class="form-group reservation-provider-fields" data-provider="expresso"><label>Usuário API Expresso</label><input type="email" name="expresso_user" value="<?=htmlspecialchars((string)($_POST['expresso_user']??''))?>" autocomplete="username"><small>Credencial usada em <code>/api/obter_token</code>.</small></div>
-<div class="form-group reservation-provider-fields" data-provider="expresso"><label>Senha API Expresso</label><input type="password" name="expresso_password" autocomplete="new-password"><small>Gravada somente no <code>config/config.local.php</code>.</small></div>
+<div class="form-group reservation-provider-fields" data-provider="expresso"><label>Usuário API Expresso</label><input type="email" name="expresso_user" value="<?=htmlspecialchars((string)($_POST['expresso_user']??$installDefaults['expresso_user']))?>" autocomplete="username"><small>Credencial usada em <code>/api/obter_token</code>.</small></div>
+<div class="form-group reservation-provider-fields" data-provider="expresso"><label>Senha API Expresso</label><input type="password" name="expresso_password" value="<?=htmlspecialchars((string)($_POST['expresso_password']??$installDefaults['expresso_password']))?>" autocomplete="new-password"><small>Gravada somente no <code>config/config.local.php</code>.</small></div>
 
 <div class="form-group full reservation-provider-fields" data-provider="iplate"><strong style="color:var(--navy)">Backend iPlate</strong><small>Use somente quando <code>login.php</code> e <code>reservation-search.php</code> estiverem publicados e acessíveis pelo servidor web.</small></div>
-<div class="form-group full reservation-provider-fields" data-provider="iplate"><label>URL do backend iPlate</label><input name="iplate_server_url" value="<?=htmlspecialchars((string)($_POST['iplate_server_url']??'https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php'))?>"><small>O sistema deriva automaticamente <code>login.php</code> e <code>reservation-search.php</code>.</small></div>
-<div class="form-group reservation-provider-fields" data-provider="iplate"><label>Usuário do backend iPlate</label><input name="iplate_username" value="<?=htmlspecialchars((string)($_POST['iplate_username']??''))?>" autocomplete="username"></div>
-<div class="form-group reservation-provider-fields" data-provider="iplate"><label>Senha do backend iPlate</label><input type="password" name="iplate_password" autocomplete="new-password"></div>
+<div class="form-group full reservation-provider-fields" data-provider="iplate"><label>URL do backend iPlate</label><input name="iplate_server_url" value="<?=htmlspecialchars((string)($_POST['iplate_server_url']??$installDefaults['iplate_server_url']))?>"><small>O sistema deriva automaticamente <code>login.php</code> e <code>reservation-search.php</code>.</small></div>
+<div class="form-group reservation-provider-fields" data-provider="iplate"><label>Usuário do backend iPlate</label><input name="iplate_username" value="<?=htmlspecialchars((string)($_POST['iplate_username']??$installDefaults['iplate_username']))?>" autocomplete="username"></div>
+<div class="form-group reservation-provider-fields" data-provider="iplate"><label>Senha do backend iPlate</label><input type="password" name="iplate_password" value="<?=htmlspecialchars((string)($_POST['iplate_password']??$installDefaults['iplate_password']))?>" autocomplete="new-password"></div>
 <div class="form-group full" style="margin-top:10px"><div class="notice"><strong>Vale Visitor local:</strong> opcional durante a instalação. Quando configurado, vendas pagas são enviadas automaticamente por webhook HMAC para o servidor local, que grava a venda e depois sincroniza com o HikCentral.</div></div>
-<div class="form-group full"><label>URL pública do receiver Vale Visitor</label><input name="visitor_receiver_url" value="<?=htmlspecialchars((string)($_POST['visitor_receiver_url']??''))?>" placeholder="https://visitor.seudominio.com.br/acquavale_receive.php"><small>Recomendado: HTTPS. O HikCentral não deve ser exposto diretamente.</small></div>
-<div class="form-group"><label>Segredo compartilhado HMAC</label><input type="password" name="visitor_receiver_secret" value="<?=htmlspecialchars((string)($_POST['visitor_receiver_secret']??''))?>" autocomplete="new-password"><small>Use exatamente o mesmo valor em VALE_AQV_SHARED_SECRET no Vale Visitor.</small></div>
-<div class="form-group"><label style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" name="visitor_receiver_tls" value="1" style="width:auto" <?=!isset($_POST['visitor_receiver_tls'])||!empty($_POST['visitor_receiver_tls'])?'checked':''?>> Validar certificado TLS do receiver</label></div>
+<div class="form-group full"><label>URL pública do receiver Vale Visitor</label><input name="visitor_receiver_url" value="<?=htmlspecialchars((string)($_POST['visitor_receiver_url']??$installDefaults['visitor_receiver_url']))?>" placeholder="https://visitor.seudominio.com.br/acquavale_receive.php"><small>Recomendado: HTTPS. O HikCentral não deve ser exposto diretamente.</small></div>
+<div class="form-group"><label>Segredo compartilhado HMAC</label><input type="password" name="visitor_receiver_secret" value="<?=htmlspecialchars((string)($_POST['visitor_receiver_secret']??$installDefaults['visitor_receiver_secret']))?>" autocomplete="new-password"><small>Use exatamente o mesmo valor em VALE_AQV_SHARED_SECRET no Vale Visitor.</small></div>
+<div class="form-group"><label style="flex-direction:row;align-items:center;gap:10px"><input type="checkbox" name="visitor_receiver_tls" value="1" style="width:auto" <?=array_key_exists('visitor_receiver_tls',$_POST)?(!empty($_POST['visitor_receiver_tls'])?'checked':''):(!empty($installDefaults['visitor_receiver_tls'])?'checked':'')?>> Validar certificado TLS do receiver</label></div>
 
 </div><button class="btn btn-primary" style="margin-top:20px">Instalar sistema</button></form></div>
 <script>
