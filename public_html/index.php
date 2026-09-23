@@ -4,9 +4,12 @@ declare(strict_types=1);
 require dirname(__DIR__).'/config/bootstrap.php';
 
 use AcquaVale\OrderService;
+use AcquaVale\VisitorPushService;
 
 $service = new OrderService();
 $error = null;
+$debugPushNotice = $_SESSION['debug_push_notice'] ?? null;
+unset($_SESSION['debug_push_notice']);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
@@ -21,6 +24,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($action === 'simulate_payment') {
             $service->simulatePayment((int)($_POST['order_id'] ?? 0));
             redirect(url('index.php?order='.urlencode((string)($_POST['order_code'] ?? ''))));
+        }
+
+        if ($action === 'debug_resend_visitor') {
+            if (!(bool)cfg('app.debug',false)) {
+                throw new RuntimeException('Reenvio manual disponível somente em modo debug.');
+            }
+
+            $orderId=(int)($_POST['order_id'] ?? 0);
+            $orderCode=(string)($_POST['order_code'] ?? '');
+            $result=(new VisitorPushService())->dispatchOrder($orderId,true);
+
+            $_SESSION['debug_push_notice']=[
+                'ok'=>!empty($result['ok']),
+                'message'=>!empty($result['ok'])
+                    ? 'Pedido reenviado ao Vale Visitor para debug.'
+                    : 'O Vale Visitor não confirmou o reenvio.',
+            ];
+            redirect(url('index.php?order='.urlencode($orderCode)));
         }
     } catch (Throwable $e) {
         $error = $e->getMessage();
@@ -205,6 +226,12 @@ function renderSteps(int $current, bool $interactive = false): void
                 Os ingressos estão ativos e preparados para validação nas catracas.
             </div>
 
+            <?php if (is_array($debugPushNotice)): ?>
+                <div class="notice <?=!empty($debugPushNotice['ok']) ? 'success' : 'error'?>">
+                    <?=e((string)($debugPushNotice['message'] ?? ''))?>
+                </div>
+            <?php endif; ?>
+
             <div class="qr-grid">
                 <?php foreach ($order['tickets'] as $index => $ticket): ?>
                 <article class="card qr-ticket">
@@ -235,7 +262,18 @@ function renderSteps(int $current, bool $interactive = false): void
                     <p>Contato principal: <strong><?=e($order['buyer_email'])?></strong> · <?=e($order['buyer_phone'])?></p>
                     <p class="muted">O ponto de integração para disparo por e-mail/WhatsApp ficará conectado aqui, sem alterar a geração dos ingressos.</p>
                 </div>
-                <button class="btn btn-outline" type="button" onclick="window.print()">Imprimir QR Codes</button>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
+                    <?php if ((bool)cfg('app.debug',false)): ?>
+                    <form method="post">
+                        <input type="hidden" name="_csrf" value="<?=e(csrf_token())?>">
+                        <input type="hidden" name="action" value="debug_resend_visitor">
+                        <input type="hidden" name="order_id" value="<?=(int)$order['id']?>">
+                        <input type="hidden" name="order_code" value="<?=e($order['order_code'])?>">
+                        <button class="btn btn-primary" type="submit">DEBUG · Reenviar ao Visitor</button>
+                    </form>
+                    <?php endif; ?>
+                    <button class="btn btn-outline" type="button" onclick="window.print()">Imprimir QR Codes</button>
+                </div>
             </div>
         </div>
     </section>
