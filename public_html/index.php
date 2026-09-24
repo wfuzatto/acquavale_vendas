@@ -54,6 +54,16 @@ $order = !empty($_GET['order'])
 
 $products = db()->query("SELECT * FROM acquavale_vendas_products WHERE active=1 ORDER BY sort_order,id")->fetchAll();
 
+// When the local development bypass is enabled, initialize the reservation in
+// the server session so the wizard can start at the ticket step immediately.
+if (
+    !$order &&
+    (bool)cfg('reservation.bypass',false) &&
+    (!is_array($_SESSION['validated_reservation']??null) || trim((string)($_SESSION['validated_reservation']['reservation_code']??''))==='')
+) {
+    $_SESSION['validated_reservation']=(new AcquaVale\ReservationService())->lookup('DEV-'.substr(session_id(),0,8));
+}
+
 $productMeta = [];
 foreach ($products as $product) {
     $productMeta[(string)$product['id']] = [

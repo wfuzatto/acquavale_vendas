@@ -106,7 +106,7 @@ Produção deve usar, por padrão, a mesma consulta de detalhes de reserva que j
 5. somente após a reserva ser validada o sistema libera a compra;
 6. antes de criar o pedido, a reserva é consultada novamente no servidor.
 
-Instalações novas devem selecionar **Expresso (recomendado)** no instalador e informar usuário/senha da API.
+Instalações novas devem selecionar **Expresso (recomendado)** no instalador e informar CPF/senha da API.
 
 Configuração:
 
@@ -117,7 +117,7 @@ Configuração:
 'expresso' => [
     'token_url' => 'https://vale.expresso.app/api/obter_token',
     'reservation_url' => 'https://vale.expresso.app/api/reserva',
-    'user' => 'SEU_USUARIO_EXPRESSO',
+    'cpf' => 'SEU_CPF_EXPRESSO',
     'password' => 'SUA_SENHA_EXPRESSO',
     'timeout_seconds' => 20,
 ],
@@ -146,7 +146,7 @@ Um HTTP 404 nesses endpoints significa que o caminho do backend iPlate não exis
 
 Se `reservation.provider` não existir, o AcquaVale tenta automaticamente:
 
-1. Expresso, quando `expresso.user` e `expresso.password` estão configurados;
+1. Expresso, quando `expresso.cpf` (ou o legado `expresso.user`) e `expresso.password` estão configurados;
 2. iPlate, somente quando Expresso não está configurado.
 
 Para evitar qualquer ambiguidade em produção, defina explicitamente:

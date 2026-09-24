@@ -12,6 +12,13 @@ final class OrderService
     public function create(array $payload, array $photos): array
     {
         $sessionReservation=$_SESSION['validated_reservation']??null;
+        if (
+            (bool)\cfg('reservation.bypass',false) &&
+            (!is_array($sessionReservation) || trim((string)($sessionReservation['reservation_code']??''))==='')
+        ) {
+            $sessionReservation=(new ReservationService())->lookup('DEV-'.substr(session_id(),0,8));
+            $_SESSION['validated_reservation']=$sessionReservation;
+        }
         if (!is_array($sessionReservation) || trim((string)($sessionReservation['reservation_code']??''))==='') {
             throw new RuntimeException('Localize e valide sua reserva antes de iniciar a compra.');
         }

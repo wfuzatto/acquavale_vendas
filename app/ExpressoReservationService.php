@@ -14,16 +14,21 @@ final class ExpressoReservationService
             throw new RuntimeException('Informe o número da reserva.');
         }
 
-        $user=trim((string)(\cfg('expresso.user','') ?: getenv('ACQUAVALE_EXPRESSO_USER') ?: ''));
+        // The Expresso API authenticates with CPF, not an e-mail/user name.
+        // Keep the old user key as a compatibility fallback for older installs.
+        $cpf=trim((string)(\cfg('expresso.cpf','') ?: getenv('ACQUAVALE_EXPRESSO_CPF') ?: ''));
+        if ($cpf==='') {
+            $cpf=trim((string)(\cfg('expresso.user','') ?: getenv('ACQUAVALE_EXPRESSO_USER') ?: ''));
+        }
         $password=(string)(\cfg('expresso.password','') ?: getenv('ACQUAVALE_EXPRESSO_PASSWORD') ?: '');
-        if ($user==='' || $password==='') {
-            throw new RuntimeException('Configure o usuário e a senha da API Expresso.');
+        if ($cpf==='' || $password==='') {
+            throw new RuntimeException('Configure o CPF e a senha da API Expresso.');
         }
 
         $timeout=max(5,(int)\cfg('expresso.timeout_seconds',20));
         $tokenResponse=$this->postJson(
             (string)\cfg('expresso.token_url','https://vale.expresso.app/api/obter_token'),
-            ['user'=>$user,'password'=>$password],
+            ['cpf'=>$cpf,'password'=>$password],
             $timeout,
             'autenticar'
         );

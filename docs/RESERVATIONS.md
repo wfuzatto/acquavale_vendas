@@ -1,7 +1,8 @@
 # Consulta de reservas
 
 O iPlate tem dois fluxos diferentes. O app Android consulta os detalhes em
-`/api/obter_token` e `/api/reserva` do Expresso, enviando JSON. A busca de sugestões
+`/api/obter_token` e `/api/reserva` do Expresso, enviando JSON. A autenticação do
+Expresso usa `cpf` e `password`; a busca de sugestões
 do backend iPlate usa `api/login.php` e `api/reservation-search.php`, com outra
 conta e outro token. As credenciais desses serviços não são intercambiáveis.
 
@@ -13,18 +14,23 @@ de criar o pedido. Configure o provedor em `config/config.local.php`:
 'expresso' => [
     'token_url' => 'https://vale.expresso.app/api/obter_token',
     'reservation_url' => 'https://vale.expresso.app/api/reserva',
-    'user' => 'USUARIO_DA_API',
+    'cpf' => 'CPF_DA_API',
     'password' => 'SENHA_DA_API',
     'timeout_seconds' => 20,
 ],
 ```
+
+Durante o desenvolvimento, `reservation.bypass` pode ser definido como `true`
+para aceitar qualquer código não vazio sem chamar a API externa. Esse modo gera
+uma reserva sintética e deve permanecer `false` em produção.
 
 Para usar o backend iPlate, defina `provider` como `iplate` e preencha a seção
 `iplate` mostrada em `config/config.example.php`, usando o endereço onde o backend
 realmente está instalado e uma conta de operador ativa.
 
 Para instalações antigas sem `reservation.provider`, o AcquaVale seleciona
-Expresso primeiro quando `expresso.user` e `expresso.password` estiverem preenchidos.
+Expresso primeiro quando `expresso.cpf` (ou o legado `expresso.user`) e
+`expresso.password` estiverem preenchidos.
 Somente se Expresso não estiver configurado ele tenta o backend iPlate.
 Senhas e tokens ficam no servidor. O arquivo local não deve entrar no Git.
 

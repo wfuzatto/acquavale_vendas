@@ -7,7 +7,7 @@ $path=parse_url($_SERVER['REQUEST_URI'],PHP_URL_PATH);
 $case=$_GET['case']??'ok';
 $input=json_decode(file_get_contents('php://input'),true)??[];
 if ($path==='/token') {
-    if ($_SERVER['REQUEST_METHOD']!=='POST' || ($input['user']??'')!=='fixture-user' || ($input['password']??'')!=='fixture-password') {
+    if ($_SERVER['REQUEST_METHOD']!=='POST' || ($input['cpf']??'')!=='fixture-cpf' || ($input['password']??'')!=='fixture-password') {
         http_response_code(400);
         echo json_encode(['error'=>'invalid_auth_contract']);
     } elseif ($case==='http-error') {

@@ -26,7 +26,7 @@ function configFor(string $case='ok'): void {
     $GLOBALS['aqv_config']=['expresso'=>[
         'token_url'=>$base.'/token?case='.urlencode($case),
         'reservation_url'=>$base.'/reservation?case='.urlencode($case),
-        'user'=>'fixture-user','password'=>'fixture-password','timeout_seconds'=>5,
+        'cpf'=>'fixture-cpf','password'=>'fixture-password','timeout_seconds'=>5,
     ]];
 }
 function failsWith(string $case,string $message): void {
@@ -65,7 +65,7 @@ $r=(new AcquaVale\ReservationService())->lookup('2505371');
 expect($r['source']==='expresso_api','Auto mode must prefer Expresso when both providers are configured'); $passed++;
 
 // If Expresso credentials are absent, legacy/auto mode can fall back to iPlate.
-$GLOBALS['aqv_config']['expresso']['user']='';
+$GLOBALS['aqv_config']['expresso']['cpf']='';
 $GLOBALS['aqv_config']['expresso']['password']='';
 $r=(new AcquaVale\ReservationService())->lookup('2505371');
 expect($r['source']==='iplate_backend' && $r['guest_count']==='2','Auto mode must fall back to iPlate when Expresso is unavailable'); $passed++;

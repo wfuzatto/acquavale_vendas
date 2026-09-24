@@ -33,11 +33,15 @@ return [
     ],
     // 'expresso' is the production default because it uses the same reservation
     // details flow that already works in the local installation. iPlate remains optional.
-    'reservation' => ['provider' => 'expresso'],
+    'reservation' => [
+        'provider' => 'expresso',
+        // Temporary local development bypass. Keep false in production.
+        'bypass' => false,
+    ],
     'expresso' => [
         'token_url' => 'https://vale.expresso.app/api/obter_token',
         'reservation_url' => 'https://vale.expresso.app/api/reserva',
-        'user' => '',
+        'cpf' => '',
         'password' => '',
         'timeout_seconds' => 20,
     ],

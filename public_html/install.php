@@ -35,7 +35,7 @@ $installDefaults=[
     'app_url'=>'http://prodatastelecom.com.br/sites/acquavale/public_html',
     'base_path'=>'/sites/acquavale/public_html',
     'reservation_provider'=>'expresso',
-    'expresso_user'=>'wesley@prodatastelecom.com.br',
+    'expresso_cpf'=>'',
     'expresso_password'=>'',
     'iplate_server_url'=>'https://vale.expresso.app/iplate/backend/api/vehicle-entry-create.php',
     'iplate_username'=>'',
@@ -59,7 +59,7 @@ if(is_file($configFile)){
             'app_url'=>(string)($existing['app']['url']??$installDefaults['app_url']),
             'base_path'=>(string)($existing['app']['base_path']??$installDefaults['base_path']),
             'reservation_provider'=>(string)($existing['reservation']['provider']??$installDefaults['reservation_provider']),
-            'expresso_user'=>(string)($existing['expresso']['user']??$installDefaults['expresso_user']),
+            'expresso_cpf'=>(string)($existing['expresso']['cpf']??$existing['expresso']['user']??$installDefaults['expresso_cpf']),
             'expresso_password'=>(string)($existing['expresso']['password']??''),
             'iplate_server_url'=>(string)($existing['iplate']['server_url']??$installDefaults['iplate_server_url']),
             'iplate_username'=>(string)($existing['iplate']['username']??''),
@@ -107,7 +107,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
         $basePath=trim((string)($_POST['base_path']??$installDefaults['base_path']));
         $appUrl=rtrim(trim((string)($_POST['app_url']??$installDefaults['app_url'])),'/');
         $reservationProvider=strtolower(trim((string)($_POST['reservation_provider']??$installDefaults['reservation_provider'])));
-        $expressoUser=trim((string)($_POST['expresso_user']??$installDefaults['expresso_user']));
+        $expressoCpf=trim((string)($_POST['expresso_cpf']??$installDefaults['expresso_cpf']));
         $expressoPassword=(string)($_POST['expresso_password']??$installDefaults['expresso_password']);
         $iplateServerUrl=rtrim(trim((string)($_POST['iplate_server_url']??$installDefaults['iplate_server_url'])),'/');
         $iplateUsername=trim((string)($_POST['iplate_username']??$installDefaults['iplate_username']));
@@ -121,7 +121,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
         if(strlen($adminPassword)<10) throw new RuntimeException('A senha administrativa deve ter pelo menos 10 caracteres.');
         if(!in_array($reservationProvider,['expresso','iplate'],true)) throw new RuntimeException('Selecione um provedor de reservas válido.');
         if($reservationProvider==='expresso'){
-            if($expressoUser==='') throw new RuntimeException('Informe o usuário da API Expresso.');
+            if($expressoCpf==='') throw new RuntimeException('Informe o CPF da API Expresso.');
             if($expressoPassword==='') throw new RuntimeException('Informe a senha da API Expresso.');
         }else{
             if($iplateServerUrl==='') throw new RuntimeException('Informe a URL do backend iPlate.');
@@ -188,7 +188,7 @@ if($_SERVER['REQUEST_METHOD']==='POST'&&!$locked){
             'expresso'=>[
                 'token_url'=>'https://vale.expresso.app/api/obter_token',
                 'reservation_url'=>'https://vale.expresso.app/api/reserva',
-                'user'=>$expressoUser,
+                'cpf'=>$expressoCpf,
                 'password'=>$expressoPassword,
                 'timeout_seconds'=>20,
             ],
@@ -250,7 +250,7 @@ $checks=[
 <div class="form-group full"><label>Provedor de reservas</label><select name="reservation_provider" id="reservation-provider"><option value="expresso" <?=($_POST['reservation_provider']??$installDefaults['reservation_provider'])==='expresso'?'selected':''?>>Expresso (recomendado)</option><option value="iplate" <?=($_POST['reservation_provider']??'')==='iplate'?'selected':''?>>Backend iPlate</option></select></div>
 
 <div class="form-group full reservation-provider-fields" data-provider="expresso"><strong style="color:var(--navy)">API Expresso</strong><small>Mesmo fluxo que já funciona na instalação local: obter token e consultar a reserva.</small></div>
-<div class="form-group reservation-provider-fields" data-provider="expresso"><label>Usuário API Expresso</label><input type="email" name="expresso_user" value="<?=htmlspecialchars((string)($_POST['expresso_user']??$installDefaults['expresso_user']))?>" autocomplete="username"><small>Credencial usada em <code>/api/obter_token</code>.</small></div>
+<div class="form-group reservation-provider-fields" data-provider="expresso"><label>CPF API Expresso</label><input type="text" name="expresso_cpf" value="<?=htmlspecialchars((string)($_POST['expresso_cpf']??$installDefaults['expresso_cpf']))?>" inputmode="numeric" autocomplete="username"><small>CPF enviado em <code>{&quot;cpf&quot;,&quot;password&quot;}</code>.</small></div>
 <div class="form-group reservation-provider-fields" data-provider="expresso"><label>Senha API Expresso</label><input type="password" name="expresso_password" value="<?=htmlspecialchars((string)($_POST['expresso_password']??$installDefaults['expresso_password']))?>" autocomplete="new-password"><small>Gravada somente no <code>config/config.local.php</code>.</small></div>
 
 <div class="form-group full reservation-provider-fields" data-provider="iplate"><strong style="color:var(--navy)">Backend iPlate</strong><small>Use somente quando <code>login.php</code> e <code>reservation-search.php</code> estiverem publicados e acessíveis pelo servidor web.</small></div>
